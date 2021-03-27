@@ -9,6 +9,9 @@
                 case 'integer':
                     value = parseInt(value);
                     break;
+                case 'numeric':
+                    value = Number(value);
+                    break;
                 case 'string':
                     value = value.toString();
                     break;
@@ -16,7 +19,7 @@
                     value = (value) ? JSON.parse(value) : [];
                     break;
                 case 'array':
-                    value = (value.constructor === Array) ? value : [value];
+                    value = (value && value.constructor && value.constructor === Array) ? value : [value];
                     break;
                 case 'array-empty':
                     value = [];
@@ -92,7 +95,7 @@
                             json[name] = element.value;
                         }
                     }
-
+                    
                     json[name] = cast(json[name], castTo); // Apply casting
                 }
             }

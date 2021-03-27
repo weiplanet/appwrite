@@ -1,68 +1,81 @@
-#!/bin/env php
 <?php
 
-require_once __DIR__.'/../../vendor/autoload.php';
-require_once __DIR__.'/../../app/init.php';
-
 use Utopia\Config\Config;
-use Utopia\CLI\CLI;
 use Utopia\CLI\Console;
 use Appwrite\Spec\Swagger2;
 use Appwrite\SDK\SDK;
+use Appwrite\SDK\Language\CLI;
 use Appwrite\SDK\Language\PHP;
-use Appwrite\SDK\Language\JS;
+use Appwrite\SDK\Language\Web;
 use Appwrite\SDK\Language\Node;
 use Appwrite\SDK\Language\Python;
 use Appwrite\SDK\Language\Ruby;
 use Appwrite\SDK\Language\Dart;
+use Appwrite\SDK\Language\Deno;
+use Appwrite\SDK\Language\DotNet;
+use Appwrite\SDK\Language\Flutter;
 use Appwrite\SDK\Language\Go;
-use Appwrite\SDK\Language\Typescript;
-
-$cli = new CLI();
-
-$version = APP_VERSION_STABLE; // Server version
-$warning = '**This SDK is compatible with Appwrite server version ' . $version . '. For older versions, please check previous releases.**';
+use Appwrite\SDK\Language\Java;
+use Appwrite\SDK\Language\Swift;
 
 $cli
-    ->task('generate')
-    ->action(function () use ($warning) {
+    ->task('sdks')
+    ->action(function () {
         function getSSLPage($url)
         {
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_HEADER, false);
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            $result = curl_exec($ch);
-            curl_close($ch);
+            $ch = \curl_init();
+            \curl_setopt($ch, CURLOPT_HEADER, false);
+            \curl_setopt($ch, CURLOPT_URL, $url);
+            \curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            \curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            \curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            $result = \curl_exec($ch);
+            \curl_close($ch);
 
             return $result;
         }
 
         $platforms = Config::getParam('platforms');
-        $message = Console::confirm('Please enter your commit message:');
-        $production = (Console::confirm('Type "Appwrite" to deploy for production') == 'Appwrite');
+        $selected = \strtolower(Console::confirm('Choose SDK ("*" for all):'));
+        $version = Console::confirm('Choose an Appwrite version');
+        $git = (Console::confirm('Should we use git push? (yes/no)') == 'yes');
+        $production = ($git) ? (Console::confirm('Type "Appwrite" to push code to production git repos') == 'Appwrite') : false;
+        $message = ($git) ? Console::confirm('Please enter your commit message:') : '';
+
+        if(!in_array($version, ['0.6.x', '0.7.x'])) {
+            throw new Exception('Unknown version given');
+        }
 
         foreach($platforms as $key => $platform) {
             foreach($platform['languages'] as $language) {
+                if($selected !== $language['key'] && $selected !== '*') {
+                    continue;
+                }
+
                 if(!$language['enabled']) {
                     Console::warning($language['name'].' for '.$platform['name'] . ' is disabled');
                     continue;
                 }
 
-                Console::info('Fetching API Spec for '.$language['name'].' for '.$platform['name']);
+                Console::info('Fetching API Spec for '.$language['name'].' for '.$platform['name'] . ' (version: '.$version.')');
                 
-                //$spec = getSSLPage('http://localhost/v1/open-api-2.json?extensions=1&platform='.$language['family']);
-                $spec = getSSLPage('https://appwrite.io/v1/open-api-2.json?extensions=1&platform='.$language['family']);
+                $spec = file_get_contents(__DIR__.'/../config/specs/'.$version.'.'.$language['family'].'.json');
 
-                $result = realpath(__DIR__.'/..').'/sdks/'.$key.'-'.$language['key'];
-                $target = realpath(__DIR__.'/..').'/sdks/git/'.$language['key'].'/';
-                $readme = realpath(__DIR__ . '/../../docs/sdks/'.$language['key'].'.md');
-                $readme = ($readme) ? file_get_contents($readme) : '';
-                $warning = ($language['beta']) ? '**This SDK is compatible with Appwrite server version ' . $version . '. For older versions, please check previous releases.**' : '';
+                $cover = 'https://appwrite.io/images/github.png';
+                $result = \realpath(__DIR__.'/..').'/sdks/'.$key.'-'.$language['key'];
+                $resultExamples = \realpath(__DIR__.'/../..').'/docs/examples/'.$version.'/'.$key.'-'.$language['key'];
+                $target = \realpath(__DIR__.'/..').'/sdks/git/'.$language['key'].'/';
+                $readme = \realpath(__DIR__ . '/../../docs/sdks/'.$language['key'].'/README.md');
+                $readme = ($readme) ? \file_get_contents($readme) : '';
+                $gettingStarted = \realpath(__DIR__ . '/../../docs/sdks/'.$language['key'].'/GETTING_STARTED.md');
+                $gettingStarted = ($gettingStarted) ? \file_get_contents($gettingStarted) : '';
+                $examples = \realpath(__DIR__ . '/../../docs/sdks/'.$language['key'].'/EXAMPLES.md');
+                $examples = ($examples) ? \file_get_contents($examples) : '';
+                $changelog = \realpath(__DIR__ . '/../../docs/sdks/'.$language['key'].'/CHANGELOG.md');
+                $changelog = ($changelog) ? \file_get_contents($changelog) : '# Change Log';
+                $warning = '**This SDK is compatible with Appwrite server version ' . $version . '. For older versions, please check [previous releases]('.$language['url'].'/releases).**';
                 $license = 'BSD-3-Clause';
-                $licenseContent = 'Copyright (c) 2019 Appwrite (https://appwrite.io) and individual contributors.
+                $licenseContent = 'Copyright (c) ' . date('Y') . ' Appwrite (https://appwrite.io) and individual contributors.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -76,55 +89,75 @@ Redistribution and use in source and binary forms, with or without modification,
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.';
 
                 switch ($language['key']) {
+                    case 'web':
+                        $config = new Web();
+                        $config->setNPMPackage('appwrite');
+                        $config->setBowerPackage('appwrite');
+                        break;
+                    case 'cli':
+                        $config = new CLI();
+                        $config->setComposerVendor('appwrite');
+                        $config->setComposerPackage('cli');
+                        $config->setExecutableName('appwrite');
+                        $config->setLogo("
+    _                            _ _           ___   __   _____ 
+   /_\  _ __  _ ____      ___ __(_) |_ ___    / __\ / /   \_   \
+  //_\\| '_ \| '_ \ \ /\ / / '__| | __/ _ \  / /   / /     / /\/
+ /  _  \ |_) | |_) \ V  V /| |  | | ||  __/ / /___/ /___/\/ /_  
+ \_/ \_/ .__/| .__/ \_/\_/ |_|  |_|\__\___| \____/\____/\____/  
+       |_|   |_|                                                  
+ ");
+                        break;
                     case 'php':
                         $config = new PHP();
-                        $config
-                            ->setComposerVendor('appwrite')
-                            ->setComposerPackage('appwrite')
-                        ;
-                        break;
-                    case 'javascript':
-                        $config = new JS();
-                        $config
-                            ->setNPMPackage('appwrite')
-                            ->setBowerPackage('appwrite')
-                        ;
-                        break;
-                    case 'typescript':
-                        $config = new Typescript();
-                        $config
-                            ->setNPMPackage('appwrite')
-                            ->setBowerPackage('appwrite')
-                        ;
+                        $config->setComposerVendor('appwrite');
+                        $config->setComposerPackage('appwrite');
                         break;
                     case 'nodejs':
                         $config = new Node();
-                        $config
-                            ->setNPMPackage('node-appwrite')
-                            ->setBowerPackage('appwrite')
-                        ;
+                        $config->setNPMPackage('node-appwrite');
+                        $config->setBowerPackage('appwrite');
+                        $warning = $warning."\n\n > This is the Node.js SDK for integrating with Appwrite from your Node.js server-side code.
+                            If you're looking to integrate from the browser, you should check [appwrite/sdk-for-web](https://github.com/appwrite/sdk-for-web)";
+                        break;
+                    case 'deno':
+                        $config = new Deno();
                         break;
                     case 'python':
                         $config = new Python();
-                        $config
-                            ->setPipPackage('appwrite')
-                        ;
+                        $config->setPipPackage('appwrite');
                         $license = 'BSD License'; // license edited due to classifiers in pypi
                     break;
                     case 'ruby':
                         $config = new Ruby();
-                        $config
-                            ->setGemPackage('appwrite')
-                        ;
+                        $config->setGemPackage('appwrite');
+                        break;
+                    case 'flutter':
+                        $config = new Flutter();
+                        $config->setPackageName('appwrite');
+                        break;
+                    case 'flutter-dev':
+                        $config = new Flutter();
+                        $config->setPackageName('appwrite_dev');
                         break;
                     case 'dart':
                         $config = new Dart();
-                        $config
-                            ->setPackageName('appwrite')
-                        ;
+                        $config->setPackageName('dart_appwrite');
+                        $warning = $warning."\n\n > This is the Dart SDK for integrating with Appwrite from your Dart server-side code.
+                            If you're looking for the Flutter SDK you should check [appwrite/sdk-for-flutter](https://github.com/appwrite/sdk-for-flutter)";
                         break;
                     case 'go':
                         $config = new Go();
+                        break;
+                    case 'java':
+                        $config = new Java();
+                        break;
+                    case 'swift':
+                        $config = new Swift();
+                        break;
+                    case 'dotnet':
+                        $cover = '';
+                        $config = new DotNet();
                         break;
                     default:
                         throw new Exception('Language "'.$language['key'].'" not supported');
@@ -136,6 +169,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
                 $sdk = new SDK($config, new Swagger2($spec));
 
                 $sdk
+                    ->setName($language['name'])
+                    ->setDescription("Appwrite is an open-source backend as a service server that abstract and simplify complex and repetitive development tasks behind a very simple to use REST API. Appwrite aims to help you develop your apps faster and in a more secure way.
+                        Use the {$language['name']} SDK to integrate your app with the Appwrite server to easily start interacting with all of Appwrite backend APIs and tools.
+                        For full API documentation and tutorials go to [https://appwrite.io/docs](https://appwrite.io/docs)")
+                    ->setShortDescription('Appwrite is an open-source self-hosted backend server that abstract and simplify complex and repetitive development tasks behind a very simple REST API')
                     ->setLicense($license)
                     ->setLicenseContent($licenseContent)
                     ->setVersion($language['version'])
@@ -143,7 +181,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
                     ->setGitRepo($language['gitUrl'])
                     ->setGitRepoName($language['gitRepoName'])
                     ->setGitUserName($language['gitUserName'])
-                    ->setLogo('https://appwrite.io/images/github.png')
+                    ->setLogo($cover)
                     ->setURL('https://appwrite.io')
                     ->setShareText('Appwrite is a backend as a service for building web or mobile apps')
                     ->setShareURL('http://appwrite.io')
@@ -151,6 +189,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
                     ->setShareVia('appwrite_io')
                     ->setWarning($warning)
                     ->setReadme($readme)
+                    ->setGettingStarted($gettingStarted)
+                    ->setChangelog($changelog)
+                    ->setExamples($examples)
                 ;
                 
                 try {
@@ -162,37 +203,39 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
                 }
 
                 $gitUrl = $language['gitUrl'];
-
-                if(empty($gitUrl)) {
-                    continue;
-                }
-
+                
                 if(!$production) {
                     $gitUrl = 'git@github.com:aw-tests/'.$language['gitRepoName'].'.git';
                 }
+                
+                if($git && !empty($gitUrl)) {
+                    \exec('rm -rf '.$target.' && \
+                        mkdir -p '.$target.' && \
+                        cd '.$target.' && \
+                        git init && \
+                        git remote add origin '.$gitUrl.' && \
+                        git fetch && \
+                        git pull '.$gitUrl.' && \
+                        rm -rf '.$target.'/* && \
+                        cp -r '.$result.'/ '.$target.'/ && \
+                        git add . && \
+                        git commit -m "'.$message.'" && \
+                        git push -u origin master
+                    ');
 
-                exec('rm -rf '.$target.' && \
-                    mkdir -p '.$target.' && \
-                    cd '.$target.' && \
-                    git init && \
-                    git remote add origin '.$gitUrl.' && \
-                    git fetch && \
-                    git pull '.$gitUrl.' && \
-                    rm -rf '.$target.'/* && \
-                    cp -r '.$result.'/ '.$target.'/ && \
-                    git add . && \
-                    git commit -m "'.$message.'" && \
-                    git push -u origin master');
+                    Console::success("Pushed {$language['name']} SDK to {$gitUrl}");
 
-                Console::success("Pushed {$language['name']} SDK to {$gitUrl}");
-         
-                exec('rm -rf '.$target);
+                    \exec('rm -rf '.$target);
+                    Console::success("Remove temp directory '{$target}' for {$language['name']} SDK");
+                }
 
-                Console::success("Remove temp directory '{$target}' for {$language['name']} SDK");
+                \exec('mkdir -p '.$resultExamples.' && cp -r '.$result.'/docs/examples '.$resultExamples);
+                Console::success("Copied code examples for {$language['name']} SDK to: {$resultExamples}");
+
+                \exec('rm -rf '.$result);
+                Console::success("Removed source code directory '{$result}' for {$language['name']} SDK");
             }
         }
 
-        exit();
+        Console::exit();
     });
-
-$cli->run();

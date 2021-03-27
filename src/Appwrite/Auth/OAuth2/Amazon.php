@@ -34,11 +34,11 @@ class Amazon extends OAuth2
     /**
      * @param $state
      *
-     * @return json
+     * @return array
      */
     public function parseState(string $state)
     {
-        return json_decode(html_entity_decode($state), true);
+        return \json_decode(\html_entity_decode($state), true);
     }
 
 
@@ -47,11 +47,11 @@ class Amazon extends OAuth2
      */
     public function getLoginURL(): string
     {
-        return 'https://www.amazon.com/ap/oa?'.http_build_query([
+        return 'https://www.amazon.com/ap/oa?'.\http_build_query([
                 'response_type' => 'code',
                 'client_id' => $this->appID,
-                'scope' => implode(' ', $this->getScopes()),
-                'state' => json_encode($this->state),
+                'scope' => \implode(' ', $this->getScopes()),
+                'state' => \json_encode($this->state),
                 'redirect_uri' => $this->callback
             ]);
     }
@@ -63,12 +63,12 @@ class Amazon extends OAuth2
      */
     public function getAccessToken(string $code): string
     {
-        $headers[] = 'Content-Type: application/x-www-form-urlencoded;charset=UTF-8';
+        $headers = ['Content-Type: application/x-www-form-urlencoded;charset=UTF-8'];
         $accessToken = $this->request(
             'POST',
             'https://api.amazon.com/auth/o2/token',
             $headers,
-            http_build_query([
+            \http_build_query([
                 'code' => $code,
                 'client_id' => $this->appID ,
                 'client_secret' => $this->appSecret,
@@ -76,7 +76,8 @@ class Amazon extends OAuth2
                 'grant_type' => 'authorization_code'
             ])
         );
-        $accessToken = json_decode($accessToken, true);
+        
+        $accessToken = \json_decode($accessToken, true);
 
         if (isset($accessToken['access_token'])) {
             return $accessToken['access_token'];
@@ -141,8 +142,8 @@ class Amazon extends OAuth2
     protected function getUser(string $accessToken): array
     {
         if (empty($this->user)) {
-            $user = $this->request('GET', 'https://api.amazon.com/user/profile?access_token='.urlencode($accessToken));
-            $this->user = json_decode($user, true);
+            $user = $this->request('GET', 'https://api.amazon.com/user/profile?access_token='.\urlencode($accessToken));
+            $this->user = \json_decode($user, true);
         }
         return $this->user;
     }

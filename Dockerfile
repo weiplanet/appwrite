@@ -1,58 +1,84 @@
-FROM ubuntu:19.10 AS builder
-
-LABEL maintainer="team@appwrite.io"
+FROM composer:2.0 as step0
 
 ARG TESTING=false
-
-ENV TZ=Asia/Tel_Aviv \
-    DEBIAN_FRONTEND=noninteractive \
-    PHP_VERSION=7.4 \
-    PHP_REDIS_VERSION=3.1.2
-
-RUN \
-  apt-get update && \
-  apt-get install -y --no-install-recommends --no-install-suggests ca-certificates software-properties-common wget curl git openssl && \
-  LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php && \
-  apt-get update && \
-  apt-get install -y --no-install-recommends --no-install-suggests make php$PHP_VERSION php$PHP_VERSION-dev zip unzip php$PHP_VERSION-zip && \
-  # Redis Extension
-  wget -q https://github.com/phpredis/phpredis/archive/$PHP_REDIS_VERSION.tar.gz && \
-  tar -xf $PHP_REDIS_VERSION.tar.gz && \
-  cd phpredis-$PHP_REDIS_VERSION && \
-  phpize$PHP_VERSION && \
-  ./configure && \
-  make && \
-  # Composer
-  curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
+ENV TESTING=$TESTING
 
 WORKDIR /usr/local/src/
 
-# Updating PHP Dependencies and Auto-loading...
-
-ENV TESTING=$TESTING
-
-COPY composer.* /usr/local/src/
+COPY composer.lock /usr/local/src/
+COPY composer.json /usr/local/src/
 
 RUN composer update --ignore-platform-reqs --optimize-autoloader \
     --no-plugins --no-scripts --prefer-dist \
     `if [ "$TESTING" != "true" ]; then echo "--no-dev"; fi`
 
-FROM ubuntu:18.04
+FROM php:7.4-cli-alpine as step1
+
+ENV PHP_REDIS_VERSION=5.3.3 \
+    PHP_SWOOLE_VERSION=v4.5.8 \
+    PHP_MAXMINDDB_VERSION=v1.10.0 \
+    PHP_XDEBUG_VERSION=sdebug_2_9-beta
+
+RUN \
+  apk add --no-cache --virtual .deps \
+  make \
+  automake \
+  autoconf \
+  gcc \
+  g++ \
+  git \
+  zlib-dev \
+  brotli-dev \
+  libmaxminddb-dev
+
+RUN docker-php-ext-install sockets
+
+RUN \
+  # Redis Extension
+  git clone https://github.com/phpredis/phpredis.git && \
+  cd phpredis && \
+  git checkout $PHP_REDIS_VERSION && \
+  phpize && \
+  ./configure && \
+  make && make install && \
+  cd .. && \
+  ## Swoole Extension
+  git clone https://github.com/swoole/swoole-src.git && \
+  cd swoole-src && \
+  git checkout $PHP_SWOOLE_VERSION && \
+  phpize && \
+  ./configure --enable-sockets --enable-http2 && \
+  make && make install && \
+  cd .. && \
+  ## Maxminddb extension
+  git clone https://github.com/maxmind/MaxMind-DB-Reader-php.git && \
+  cd MaxMind-DB-Reader-php && \
+  git checkout $PHP_MAXMINDDB_VERSION && \
+  cd ext && \
+  phpize && \
+  ./configure && \
+  make && make install && \
+  cd ../..
+
+FROM php:7.4-cli-alpine as final
+
 LABEL maintainer="team@appwrite.io"
 
 ARG VERSION=dev
 
-ENV TZ=Asia/Tel_Aviv \
-    DEBIAN_FRONTEND=noninteractive \
-    PHP_VERSION=7.4 \
+ENV _APP_SERVER=swoole \
     _APP_ENV=production \
     _APP_DOMAIN=localhost \
     _APP_DOMAIN_TARGET=localhost \
     _APP_HOME=https://appwrite.io \
     _APP_EDITION=community \
     _APP_OPTIONS_ABUSE=enabled \
+    _APP_OPTIONS_FORCE_HTTPS=disabled \
     _APP_OPENSSL_KEY_V1=your-secret-key \
-    _APP_STORAGE_LIMIT=104857600 \
+    _APP_STORAGE_LIMIT=10000000 \
+    _APP_STORAGE_ANTIVIRUS=enabled \
+    _APP_STORAGE_ANTIVIRUS_HOST=clamav \
+    _APP_STORAGE_ANTIVIRUS_PORT=3310 \
     _APP_REDIS_HOST=redis \
     _APP_REDIS_PORT=6379 \
     _APP_DB_HOST=mariadb \
@@ -64,87 +90,112 @@ ENV TZ=Asia/Tel_Aviv \
     _APP_INFLUXDB_PORT=8086 \
     _APP_STATSD_HOST=telegraf \
     _APP_STATSD_PORT=8125 \
-    _APP_SMTP_HOST=smtp \
-    _APP_SMTP_PORT=25 \
+    _APP_SMTP_HOST= \
+    _APP_SMTP_PORT= \
+    _APP_SMTP_SECURE= \
+    _APP_SMTP_USERNAME= \
+    _APP_SMTP_PASSWORD= \
+    _APP_FUNCTIONS_TIMEOUT=900 \
+    _APP_FUNCTIONS_CONTAINERS=10 \
+    _APP_FUNCTIONS_CPUS=1 \
+    _APP_FUNCTIONS_MEMORY=128 \
+    _APP_FUNCTIONS_MEMORY_SWAP=128 \
     _APP_SETUP=self-hosted \
-    _APP_VERSION=$VERSION
-#ENV _APP_SMTP_SECURE ''
-#ENV _APP_SMTP_USERNAME ''
-#ENV _APP_SMTP_PASSWORD ''
-
-COPY --from=builder /phpredis-3.1.2/modules/redis.so /usr/lib/php/20190902/
+    _APP_VERSION=$VERSION \
+    _APP_USAGE_STATS=enabled \
+    # 14 Days = 1209600 s
+    _APP_MAINTENANCE_RETENTION_EXECUTION=1209600 \
+    _APP_MAINTENANCE_RETENTION_AUDIT=1209600 \
+    # 1 Day = 86400 s
+    _APP_MAINTENANCE_RETENTION_ABUSE=86400 \
+    _APP_MAINTENANCE_INTERVAL=86400
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN \
-  apt-get update && \
-  apt-get install -y --no-install-recommends --no-install-suggests wget curl ca-certificates software-properties-common openssl gnupg && \
-  LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php && \
-  add-apt-repository universe && \
-  add-apt-repository ppa:certbot/certbot && \
-  apt-get update && \
-  apt-get install -y --no-install-recommends --no-install-suggests htop supervisor php$PHP_VERSION php$PHP_VERSION-fpm \
-  php$PHP_VERSION-mysqlnd php$PHP_VERSION-curl php$PHP_VERSION-imagick php$PHP_VERSION-mbstring php$PHP_VERSION-dom webp certbot && \
-  # Nginx
-  echo "deb http://nginx.org/packages/mainline/ubuntu/ bionic nginx" >> /etc/apt/sources.list.d/nginx.list && \
-  wget -q http://nginx.org/keys/nginx_signing.key && \
-  apt-key add nginx_signing.key && \
-  apt-get update && \
-  apt-get install -y --no-install-recommends --no-install-suggests nginx && \
-  # Redis Extension
-  echo extension=redis.so >> /etc/php/$PHP_VERSION/fpm/conf.d/redis.ini && \
-  echo extension=redis.so >> /etc/php/$PHP_VERSION/cli/conf.d/redis.ini && \
-  # Cleanup
-  cd ../ && \
-  apt-get purge -y --auto-remove software-properties-common gnupg curl && \
-  apt-get clean && \
-  rm -rf /var/lib/apt/lists/*
+  apk update \
+  && apk add --no-cache --virtual .deps \
+  make \
+  automake \
+  autoconf \
+  gcc \
+  g++ \
+  curl-dev \
+  && apk add --no-cache \
+  libstdc++ \
+  yaml-dev \
+  imagemagick \
+  imagemagick-dev \
+  certbot \
+  docker-cli \
+  docker-compose \
+  libmaxminddb \
+  libmaxminddb-dev \
+  && pecl install imagick yaml \ 
+  && docker-php-ext-enable imagick yaml \
+  && docker-php-ext-install sockets opcache pdo_mysql \
+  && apk del .deps \
+  && rm -rf /var/cache/apk/*
 
-# Set Upload Limit (default to 100MB)
-RUN echo "upload_max_filesize = ${_APP_STORAGE_LIMIT}" >> /etc/php/$PHP_VERSION/fpm/conf.d/appwrite.ini
-RUN echo "post_max_size = ${_APP_STORAGE_LIMIT}" >> /etc/php/$PHP_VERSION/fpm/conf.d/appwrite.ini
-RUN echo "env[TESTME] = your-secret-key" >> /etc/php/$PHP_VERSION/fpm/conf.d/appwrite.ini
+WORKDIR /usr/src/code
 
-# Add logs file
-RUN echo "" >> /var/log/appwrite.log
+COPY --from=step0 /usr/local/src/vendor /usr/src/code/vendor
+COPY --from=step1 /usr/local/lib/php/extensions/no-debug-non-zts-20190902/swoole.so /usr/local/lib/php/extensions/no-debug-non-zts-20190902/
+COPY --from=step1 /usr/local/lib/php/extensions/no-debug-non-zts-20190902/redis.so /usr/local/lib/php/extensions/no-debug-non-zts-20190902/
+COPY --from=step1 /usr/local/lib/php/extensions/no-debug-non-zts-20190902/maxminddb.so /usr/local/lib/php/extensions/no-debug-non-zts-20190902/ 
 
-# Nginx Configuration (with self-signed ssl certificates)
-COPY ./docker/nginx.conf /etc/nginx/nginx.conf
-COPY ./docker/ssl/cert.pem /etc/nginx/ssl/cert.pem
-COPY ./docker/ssl/key.pem /etc/nginx/ssl/key.pem
+# Add Source Code
+COPY ./app /usr/src/code/app
+COPY ./bin /usr/local/bin
+COPY ./docs /usr/src/code/docs
+COPY ./public /usr/src/code/public
+COPY ./src /usr/src/code/src
 
-# PHP Configuration
-RUN mkdir -p /var/run/php
-COPY ./docker/www.conf /etc/php/$PHP_VERSION/fpm/pool.d/www.conf
-
-# Add PHP Source Code
-COPY ./app /usr/share/nginx/html/app
-COPY ./docs /usr/share/nginx/html/docs
-COPY ./public /usr/share/nginx/html/public
-COPY ./src /usr/share/nginx/html/src
-COPY --from=builder /usr/local/src/vendor /usr/share/nginx/html/vendor
-
+# Set Volumes
 RUN mkdir -p /storage/uploads && \
     mkdir -p /storage/cache && \
+    mkdir -p /storage/config && \
+    mkdir -p /storage/certificates && \
+    mkdir -p /storage/functions && \
+    mkdir -p /storage/debug && \
     chown -Rf www-data.www-data /storage/uploads && chmod -Rf 0755 /storage/uploads && \
-    chown -Rf www-data.www-data /storage/cache && chmod -Rf 0755 /storage/cache
+    chown -Rf www-data.www-data /storage/cache && chmod -Rf 0755 /storage/cache && \
+    chown -Rf www-data.www-data /storage/config && chmod -Rf 0755 /storage/config && \
+    chown -Rf www-data.www-data /storage/certificates && chmod -Rf 0755 /storage/certificates && \
+    chown -Rf www-data.www-data /storage/functions && chmod -Rf 0755 /storage/functions && \
+    chown -Rf www-data.www-data /storage/debug && chmod -Rf 0755 /storage/debug
 
-# Supervisord Conf
-COPY ./docker/supervisord.conf /etc/supervisord.conf
-
-# Start
-COPY ./docker/bin/start /start
-RUN chmod 775 /start
-
-# Upgrade
-COPY ./docker/bin/upgrade /upgrade
-RUN chmod 775 /upgrade
+# Executables
+RUN chmod +x /usr/local/bin/doctor && \
+    chmod +x /usr/local/bin/maintenance && \
+    chmod +x /usr/local/bin/install && \
+    chmod +x /usr/local/bin/migrate && \
+    chmod +x /usr/local/bin/schedule && \
+    chmod +x /usr/local/bin/sdks && \
+    chmod +x /usr/local/bin/ssl && \
+    chmod +x /usr/local/bin/test && \
+    chmod +x /usr/local/bin/vars && \
+    chmod +x /usr/local/bin/worker-audits && \
+    chmod +x /usr/local/bin/worker-certificates && \
+    chmod +x /usr/local/bin/worker-deletes && \
+    chmod +x /usr/local/bin/worker-functions && \
+    chmod +x /usr/local/bin/worker-mails && \
+    chmod +x /usr/local/bin/worker-tasks && \
+    chmod +x /usr/local/bin/worker-usage && \
+    chmod +x /usr/local/bin/worker-webhooks
 
 # Letsencrypt Permissions
 RUN mkdir -p /etc/letsencrypt/live/ && chmod -Rf 755 /etc/letsencrypt/live/
 
+# Enable Extensions
+RUN echo extension=swoole.so >> /usr/local/etc/php/conf.d/swoole.ini
+RUN echo extension=redis.so >> /usr/local/etc/php/conf.d/redis.ini
+RUN echo extension=maxminddb.so >> /usr/local/etc/php/conf.d/maxminddb.ini
+
+RUN echo "opcache.preload_user=www-data" >> /usr/local/etc/php/conf.d/appwrite.ini
+RUN echo "opcache.preload=/usr/src/code/app/preload.php" >> /usr/local/etc/php/conf.d/appwrite.ini
+RUN echo "opcache.enable_cli=1" >> /usr/local/etc/php/conf.d/appwrite.ini
+
 EXPOSE 80
 
-WORKDIR /usr/share/nginx/html
-
-CMD ["/bin/bash", "/start"]
+CMD [ "php", "app/http.php", "-dopcache.preload=opcache.preload=/usr/src/code/app/preload.php" ]

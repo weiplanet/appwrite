@@ -2,339 +2,481 @@
 
 global $utopia, $request, $response;
 
+use Appwrite\Database\Document;
+use Appwrite\Utopia\Response;
+use Utopia\App;
 use Utopia\Validator\Numeric;
 use Utopia\Validator\Text;
 use Utopia\Validator\ArrayList;
-use Utopia\Response;
 use Utopia\Validator\Host;
-use Appwrite\Storage\Validators\File;
+use Utopia\Storage\Validator\File;
 
-$result = [];
-
-$utopia->get('/v1/mock/tests/foo')
-    ->desc('Mock a get request for SDK tests')
+App::get('/v1/mock/tests/foo')
+    ->desc('Get Foo')
+    ->groups(['mock'])
     ->label('scope', 'public')
+    ->label('sdk.platform', [APP_PLATFORM_CLIENT, APP_PLATFORM_SERVER])
     ->label('sdk.namespace', 'foo')
     ->label('sdk.method', 'get')
-    ->label('sdk.description', 'Mock a get request for SDK tests')
-    ->param('x', '', function () { return new Text(100); }, 'Sample string param')
-    ->param('y', '', function () { return new Numeric(); }, 'Sample numeric param')
-    ->param('z', null, function () { return new ArrayList(new Text(256)); }, 'Sample array param')
-    ->action(
-        function ($x, $y, $z) {
+    ->label('sdk.description', 'Mock a get request.')
+    ->label('sdk.response.code', Response::STATUS_CODE_OK)
+    ->label('sdk.response.type', Response::CONTENT_TYPE_JSON)
+    ->label('sdk.response.model', Response::MODEL_MOCK)
+    ->label('sdk.mock', true)
+    ->param('x', '', new Text(100), 'Sample string param')
+    ->param('y', '', new Numeric(), 'Sample numeric param')
+    ->param('z', null, new ArrayList(new Text(256)), 'Sample array param')
+    ->action(function ($x, $y, $z) {
+    });
 
-        }
-    );
-
-$utopia->post('/v1/mock/tests/foo')
-    ->desc('Mock a post request for SDK tests')
+App::post('/v1/mock/tests/foo')
+    ->desc('Post Foo')
+    ->groups(['mock'])
     ->label('scope', 'public')
+    ->label('sdk.platform', [APP_PLATFORM_CLIENT, APP_PLATFORM_SERVER])
     ->label('sdk.namespace', 'foo')
     ->label('sdk.method', 'post')
-    ->label('sdk.description', 'Mock a post request for SDK tests')
-    ->param('x', '', function () { return new Text(100); }, 'Sample string param')
-    ->param('y', '', function () { return new Numeric(); }, 'Sample numeric param')
-    ->param('z', null, function () { return new ArrayList(new Text(256)); }, 'Sample array param')
-    ->action(
-        function ($x, $y, $z) {
+    ->label('sdk.description', 'Mock a post request.')
+    ->label('sdk.response.code', Response::STATUS_CODE_OK)
+    ->label('sdk.response.type', Response::CONTENT_TYPE_JSON)
+    ->label('sdk.response.model', Response::MODEL_MOCK)
+    ->label('sdk.mock', true)
+    ->param('x', '', new Text(100), 'Sample string param')
+    ->param('y', '', new Numeric(), 'Sample numeric param')
+    ->param('z', null, new ArrayList(new Text(256)), 'Sample array param')
+    ->action(function ($x, $y, $z) {
+    });
 
-        }
-    );
-
-$utopia->patch('/v1/mock/tests/foo')
-    ->desc('Mock a patch request for SDK tests')
+App::patch('/v1/mock/tests/foo')
+    ->desc('Patch Foo')
+    ->groups(['mock'])
     ->label('scope', 'public')
+    ->label('sdk.platform', [APP_PLATFORM_CLIENT, APP_PLATFORM_SERVER])
     ->label('sdk.namespace', 'foo')
     ->label('sdk.method', 'patch')
-    ->label('sdk.description', 'Mock a get request for SDK tests')
-    ->param('x', '', function () { return new Text(100); }, 'Sample string param')
-    ->param('y', '', function () { return new Numeric(); }, 'Sample numeric param')
-    ->param('z', null, function () { return new ArrayList(new Text(256)); }, 'Sample array param')
-    ->action(
-        function ($x, $y, $z) {
+    ->label('sdk.description', 'Mock a patch request.')
+    ->label('sdk.response.code', Response::STATUS_CODE_OK)
+    ->label('sdk.response.type', Response::CONTENT_TYPE_JSON)
+    ->label('sdk.response.model', Response::MODEL_MOCK)
+    ->label('sdk.mock', true)
+    ->param('x', '', new Text(100), 'Sample string param')
+    ->param('y', '', new Numeric(), 'Sample numeric param')
+    ->param('z', null, new ArrayList(new Text(256)), 'Sample array param')
+    ->action(function ($x, $y, $z) {
+    });
 
-        }
-    );
-
-$utopia->put('/v1/mock/tests/foo')
-    ->desc('Mock a put request for SDK tests')
+App::put('/v1/mock/tests/foo')
+    ->desc('Put Foo')
+    ->groups(['mock'])
     ->label('scope', 'public')
+    ->label('sdk.platform', [APP_PLATFORM_CLIENT, APP_PLATFORM_SERVER])
     ->label('sdk.namespace', 'foo')
     ->label('sdk.method', 'put')
-    ->label('sdk.description', 'Mock a put request for SDK tests')
-    ->param('x', '', function () { return new Text(100); }, 'Sample string param')
-    ->param('y', '', function () { return new Numeric(); }, 'Sample numeric param')
-    ->param('z', null, function () { return new ArrayList(new Text(256)); }, 'Sample array param')
-    ->action(
-        function ($x, $y, $z) {
+    ->label('sdk.description', 'Mock a put request.')
+    ->label('sdk.response.code', Response::STATUS_CODE_OK)
+    ->label('sdk.response.type', Response::CONTENT_TYPE_JSON)
+    ->label('sdk.response.model', Response::MODEL_MOCK)
+    ->label('sdk.mock', true)
+    ->param('x', '', new Text(100), 'Sample string param')
+    ->param('y', '', new Numeric(), 'Sample numeric param')
+    ->param('z', null, new ArrayList(new Text(256)), 'Sample array param')
+    ->action(function ($x, $y, $z) {
+    });
 
-        }
-    );
-
-$utopia->delete('/v1/mock/tests/foo')
-    ->desc('Mock a delete request for SDK tests')
+App::delete('/v1/mock/tests/foo')
+    ->desc('Delete Foo')
+    ->groups(['mock'])
     ->label('scope', 'public')
+    ->label('sdk.platform', [APP_PLATFORM_CLIENT, APP_PLATFORM_SERVER])
     ->label('sdk.namespace', 'foo')
     ->label('sdk.method', 'delete')
-    ->label('sdk.description', 'Mock a delete request for SDK tests')
-    ->param('x', '', function () { return new Text(100); }, 'Sample string param')
-    ->param('y', '', function () { return new Numeric(); }, 'Sample numeric param')
-    ->param('z', null, function () { return new ArrayList(new Text(256)); }, 'Sample array param')
-    ->action(
-        function ($x, $y, $z) {
+    ->label('sdk.description', 'Mock a delete request.')
+    ->label('sdk.response.code', Response::STATUS_CODE_OK)
+    ->label('sdk.response.type', Response::CONTENT_TYPE_JSON)
+    ->label('sdk.response.model', Response::MODEL_MOCK)
+    ->label('sdk.mock', true)
+    ->param('x', '', new Text(100), 'Sample string param')
+    ->param('y', '', new Numeric(), 'Sample numeric param')
+    ->param('z', null, new ArrayList(new Text(256)), 'Sample array param')
+    ->action(function ($x, $y, $z) {
+    });
 
-        }
-    );
-
-$utopia->get('/v1/mock/tests/bar')
-    ->desc('Mock a get request for SDK tests')
+App::get('/v1/mock/tests/bar')
+    ->desc('Get Bar')
+    ->groups(['mock'])
     ->label('scope', 'public')
+    ->label('sdk.platform', [APP_PLATFORM_CLIENT, APP_PLATFORM_SERVER])
     ->label('sdk.namespace', 'bar')
     ->label('sdk.method', 'get')
-    ->label('sdk.description', 'Mock a get request for SDK tests')
-    ->param('x', '', function () { return new Text(100); }, 'Sample string param')
-    ->param('y', '', function () { return new Numeric(); }, 'Sample numeric param')
-    ->param('z', null, function () { return new ArrayList(new Text(256)); }, 'Sample array param')
-    ->action(
-        function ($x, $y, $z) {
+    ->label('sdk.description', 'Mock a get request.')
+    ->label('sdk.response.code', Response::STATUS_CODE_OK)
+    ->label('sdk.response.type', Response::CONTENT_TYPE_JSON)
+    ->label('sdk.response.model', Response::MODEL_MOCK)
+    ->label('sdk.mock', true)
+    ->param('x', '', new Text(100), 'Sample string param')
+    ->param('y', '', new Numeric(), 'Sample numeric param')
+    ->param('z', null, new ArrayList(new Text(256)), 'Sample array param')
+    ->action(function ($x, $y, $z) {
+    });
 
-        }
-    );
-
-$utopia->post('/v1/mock/tests/bar')
-    ->desc('Mock a post request for SDK tests')
+App::post('/v1/mock/tests/bar')
+    ->desc('Post Bar')
+    ->groups(['mock'])
     ->label('scope', 'public')
+    ->label('sdk.platform', [APP_PLATFORM_CLIENT, APP_PLATFORM_SERVER])
     ->label('sdk.namespace', 'bar')
     ->label('sdk.method', 'post')
-    ->label('sdk.description', 'Mock a post request for SDK tests')
-    ->param('x', '', function () { return new Text(100); }, 'Sample string param')
-    ->param('y', '', function () { return new Numeric(); }, 'Sample numeric param')
-    ->param('z', null, function () { return new ArrayList(new Text(256)); }, 'Sample array param')
-    ->action(
-        function ($x, $y, $z) {
+    ->label('sdk.description', 'Mock a post request.')
+    ->label('sdk.response.code', Response::STATUS_CODE_OK)
+    ->label('sdk.response.type', Response::CONTENT_TYPE_JSON)
+    ->label('sdk.response.model', Response::MODEL_MOCK)
+    ->label('sdk.mock', true)
+    ->param('x', '', new Text(100), 'Sample string param')
+    ->param('y', '', new Numeric(), 'Sample numeric param')
+    ->param('z', null, new ArrayList(new Text(256)), 'Sample array param')
+    ->action(function ($x, $y, $z) {
+    });
 
-        }
-    );
-
-$utopia->patch('/v1/mock/tests/bar')
-    ->desc('Mock a patch request for SDK tests')
+App::patch('/v1/mock/tests/bar')
+    ->desc('Patch Bar')
+    ->groups(['mock'])
     ->label('scope', 'public')
+    ->label('sdk.platform', [APP_PLATFORM_CLIENT, APP_PLATFORM_SERVER])
     ->label('sdk.namespace', 'bar')
     ->label('sdk.method', 'patch')
-    ->label('sdk.description', 'Mock a get request for SDK tests')
-    ->param('x', '', function () { return new Text(100); }, 'Sample string param')
-    ->param('y', '', function () { return new Numeric(); }, 'Sample numeric param')
-    ->param('z', null, function () { return new ArrayList(new Text(256)); }, 'Sample array param')
-    ->action(
-        function ($x, $y, $z) {
+    ->label('sdk.description', 'Mock a patch request.')
+    ->label('sdk.response.code', Response::STATUS_CODE_OK)
+    ->label('sdk.response.type', Response::CONTENT_TYPE_JSON)
+    ->label('sdk.response.model', Response::MODEL_MOCK)
+    ->label('sdk.mock', true)
+    ->param('x', '', new Text(100), 'Sample string param')
+    ->param('y', '', new Numeric(), 'Sample numeric param')
+    ->param('z', null, new ArrayList(new Text(256)), 'Sample array param')
+    ->action(function ($x, $y, $z) {
+    });
 
-        }
-    );
-
-$utopia->put('/v1/mock/tests/bar')
-    ->desc('Mock a put request for SDK tests')
+App::put('/v1/mock/tests/bar')
+    ->desc('Put Bar')
+    ->groups(['mock'])
     ->label('scope', 'public')
+    ->label('sdk.platform', [APP_PLATFORM_CLIENT, APP_PLATFORM_SERVER])
     ->label('sdk.namespace', 'bar')
     ->label('sdk.method', 'put')
-    ->label('sdk.description', 'Mock a put request for SDK tests')
-    ->param('x', '', function () { return new Text(100); }, 'Sample string param')
-    ->param('y', '', function () { return new Numeric(); }, 'Sample numeric param')
-    ->param('z', null, function () { return new ArrayList(new Text(256)); }, 'Sample array param')
-    ->action(
-        function ($x, $y, $z) {
+    ->label('sdk.description', 'Mock a put request.')
+    ->label('sdk.response.code', Response::STATUS_CODE_OK)
+    ->label('sdk.response.type', Response::CONTENT_TYPE_JSON)
+    ->label('sdk.response.model', Response::MODEL_MOCK)
+    ->label('sdk.mock', true)
+    ->param('x', '', new Text(100), 'Sample string param')
+    ->param('y', '', new Numeric(), 'Sample numeric param')
+    ->param('z', null, new ArrayList(new Text(256)), 'Sample array param')
+    ->action(function ($x, $y, $z) {
+    });
 
-        }
-    );
-
-$utopia->delete('/v1/mock/tests/bar')
-    ->desc('Mock a delete request for SDK tests')
+App::delete('/v1/mock/tests/bar')
+    ->desc('Delete Bar')
+    ->groups(['mock'])
     ->label('scope', 'public')
+    ->label('sdk.platform', [APP_PLATFORM_CLIENT, APP_PLATFORM_SERVER])
     ->label('sdk.namespace', 'bar')
     ->label('sdk.method', 'delete')
-    ->label('sdk.description', 'Mock a delete request for SDK tests')
-    ->param('x', '', function () { return new Text(100); }, 'Sample string param')
-    ->param('y', '', function () { return new Numeric(); }, 'Sample numeric param')
-    ->param('z', null, function () { return new ArrayList(new Text(256)); }, 'Sample array param')
-    ->action(
-        function ($x, $y, $z) {
+    ->label('sdk.description', 'Mock a delete request.')
+    ->label('sdk.response.code', Response::STATUS_CODE_OK)
+    ->label('sdk.response.type', Response::CONTENT_TYPE_JSON)
+    ->label('sdk.response.model', Response::MODEL_MOCK)
+    ->label('sdk.mock', true)
+    ->param('x', '', new Text(100), 'Sample string param')
+    ->param('y', '', new Numeric(), 'Sample numeric param')
+    ->param('z', null, new ArrayList(new Text(256)), 'Sample array param')
+    ->action(function ($x, $y, $z) {
+    });
 
-        }
-    );
-
-$utopia->post('/v1/mock/tests/general/upload')
-    ->desc('Mock a post request for SDK tests')
+App::post('/v1/mock/tests/general/upload')
+    ->desc('Upload File')
+    ->groups(['mock'])
     ->label('scope', 'public')
+    ->label('sdk.platform', [APP_PLATFORM_CLIENT, APP_PLATFORM_SERVER])
     ->label('sdk.namespace', 'general')
     ->label('sdk.method', 'upload')
-    ->label('sdk.description', 'Mock a delete request for SDK tests')
-    ->label('sdk.consumes', 'multipart/form-data')
-    ->param('x', '', function () { return new Text(100); }, 'Sample string param')
-    ->param('y', '', function () { return new Numeric(); }, 'Sample numeric param')
-    ->param('z', null, function () { return new ArrayList(new Text(256)); }, 'Sample array param')
-    ->param('file', [], function () { return new File(); }, 'Sample file param', false)
-    ->action(
-        function ($x, $y, $z, $file) use ($request) {
-            $file = $request->getFiles('file');
-            $file['tmp_name'] = (is_array($file['tmp_name'])) ? $file['tmp_name'] : [$file['tmp_name']];
-            $file['name'] = (is_array($file['name'])) ? $file['name'] : [$file['name']];
-            $file['size'] = (is_array($file['size'])) ? $file['size'] : [$file['size']];
+    ->label('sdk.description', 'Mock a file upload request.')
+    ->label('sdk.request.type', 'multipart/form-data')
+    ->label('sdk.response.code', Response::STATUS_CODE_OK)
+    ->label('sdk.response.type', Response::CONTENT_TYPE_JSON)
+    ->label('sdk.response.model', Response::MODEL_MOCK)
+    ->label('sdk.mock', true)
+    ->param('x', '', new Text(100), 'Sample string param')
+    ->param('y', '', new Numeric(), 'Sample numeric param')
+    ->param('z', null, new ArrayList(new Text(256)), 'Sample array param')
+    ->param('file', [], new File(), 'Sample file param', false)
+    ->inject('request')
+    ->action(function ($x, $y, $z, $file, $request) {
+        /** @var Utopia\Swoole\Request $request */
+        
+        $file = $request->getFiles('file');
+        $file['tmp_name'] = (\is_array($file['tmp_name'])) ? $file['tmp_name'] : [$file['tmp_name']];
+        $file['name'] = (\is_array($file['name'])) ? $file['name'] : [$file['name']];
+        $file['size'] = (\is_array($file['size'])) ? $file['size'] : [$file['size']];
 
-            foreach ($file['name'] as $i => $name) {
-                if($name !== 'file.png') {
-                    throw new Exception('Wrong file name', 400);
-                }
-            }
-
-            foreach ($file['size'] as $i => $size) {
-                if($size !== 38756) {
-                    throw new Exception('Wrong file size', 400);
-                }
-            }
-
-            foreach ($file['tmp_name'] as $i => $tmpName) {
-                if(md5(file_get_contents($tmpName)) !== 'd80e7e6999a3eb2ae0d631a96fe135a4') {
-                    throw new Exception('Wrong file uploaded', 400);
-                }
+        foreach ($file['name'] as $i => $name) {
+            if ($name !== 'file.png') {
+                throw new Exception('Wrong file name', 400);
             }
         }
-    );
 
-$utopia->get('/v1/mock/tests/general/redirect')
-    ->desc('Mock a post request for SDK tests')
+        foreach ($file['size'] as $i => $size) {
+            if ($size !== 38756) {
+                throw new Exception('Wrong file size', 400);
+            }
+        }
+
+        foreach ($file['tmp_name'] as $i => $tmpName) {
+            if (\md5(\file_get_contents($tmpName)) !== 'd80e7e6999a3eb2ae0d631a96fe135a4') {
+                throw new Exception('Wrong file uploaded', 400);
+            }
+        }
+    });
+
+App::get('/v1/mock/tests/general/redirect')
+    ->desc('Redirect')
+    ->groups(['mock'])
     ->label('scope', 'public')
+    ->label('sdk.platform', [APP_PLATFORM_CLIENT, APP_PLATFORM_SERVER])
     ->label('sdk.namespace', 'general')
     ->label('sdk.method', 'redirect')
-    ->label('sdk.description', 'Mock a redirect request for SDK tests')
-    ->action(
-        function () use ($response) {
-            $response->redirect('/v1/mock/tests/general/redirected');
-        }
-    );
+    ->label('sdk.description', 'Mock a redirect request.')
+    ->label('sdk.response.code', Response::STATUS_CODE_MOVED_PERMANENTLY)
+    ->label('sdk.response.type', Response::CONTENT_TYPE_HTML)
+    ->label('sdk.mock', true)
+    ->inject('response')
+    ->action(function ($response) {
+        /** @var Appwrite\Utopia\Response $response */
 
-$utopia->get('/v1/mock/tests/general/redirected')
-    ->desc('Mock a post request for SDK tests')
+        $response->redirect('/v1/mock/tests/general/redirect/done');
+    });
+
+App::get('/v1/mock/tests/general/redirect/done')
+    ->desc('Redirected')
+    ->groups(['mock'])
     ->label('scope', 'public')
+    ->label('sdk.platform', [APP_PLATFORM_CLIENT, APP_PLATFORM_SERVER])
     ->label('sdk.namespace', 'general')
     ->label('sdk.method', 'redirected')
-    ->label('sdk.description', 'Mock a redirected request for SDK tests')
-    ->action(
-        function () {
-        }
-    );
+    ->label('sdk.description', 'Mock a redirected request.')
+    ->label('sdk.response.code', Response::STATUS_CODE_OK)
+    ->label('sdk.response.type', Response::CONTENT_TYPE_JSON)
+    ->label('sdk.response.model', Response::MODEL_MOCK)
+    ->label('sdk.mock', true)
+    ->action(function () {
+    });
 
-$utopia->get('/v1/mock/tests/general/empty')
-    ->desc('Mock a post request for SDK tests')
+App::get('/v1/mock/tests/general/set-cookie')
+    ->desc('Set Cookie')
+    ->groups(['mock'])
     ->label('scope', 'public')
+    ->label('sdk.platform', [APP_PLATFORM_CLIENT, APP_PLATFORM_SERVER])
+    ->label('sdk.namespace', 'general')
+    ->label('sdk.method', 'setCookie')
+    ->label('sdk.description', 'Mock a set cookie request.')
+    ->label('sdk.response.code', Response::STATUS_CODE_OK)
+    ->label('sdk.response.type', Response::CONTENT_TYPE_JSON)
+    ->label('sdk.response.model', Response::MODEL_MOCK)
+    ->label('sdk.mock', true)
+    ->inject('response')
+    ->action(function ($response) {
+        /** @var Appwrite\Utopia\Response $response */
+
+        $response->addCookie('cookieName', 'cookieValue', \time() + 31536000, '/', 'localhost', true, true);
+    });
+
+App::get('/v1/mock/tests/general/get-cookie')
+    ->desc('Get Cookie')
+    ->groups(['mock'])
+    ->label('scope', 'public')
+    ->label('sdk.platform', [APP_PLATFORM_CLIENT, APP_PLATFORM_SERVER])
+    ->label('sdk.namespace', 'general')
+    ->label('sdk.method', 'getCookie')
+    ->label('sdk.description', 'Mock a cookie response.')
+    ->label('sdk.response.code', Response::STATUS_CODE_OK)
+    ->label('sdk.response.type', Response::CONTENT_TYPE_JSON)
+    ->label('sdk.response.model', Response::MODEL_MOCK)
+    ->label('sdk.mock', true)
+    ->inject('request')
+    ->action(function ($request) {
+        /** @var Utopia\Swoole\Request $request */
+
+        if ($request->getCookie('cookieName', '') !== 'cookieValue') {
+            throw new Exception('Missing cookie value', 400);
+        }
+    });
+
+App::get('/v1/mock/tests/general/empty')
+    ->desc('Empty Response')
+    ->groups(['mock'])
+    ->label('scope', 'public')
+    ->label('sdk.platform', [APP_PLATFORM_CLIENT, APP_PLATFORM_SERVER])
     ->label('sdk.namespace', 'general')
     ->label('sdk.method', 'empty')
-    ->label('sdk.description', 'Mock a redirected request for SDK tests')
-    ->action(
-        function () use ($response) {
-            $response->noContent();
-            exit();
-        }
-    );
+    ->label('sdk.description', 'Mock a an empty response.')
+    ->label('sdk.response.code', Response::STATUS_CODE_NOCONTENT)
+    ->label('sdk.response.model', Response::MODEL_NONE)
+    ->label('sdk.mock', true)
+    ->inject('response')
+    ->action(function ($response) {
+        /** @var Appwrite\Utopia\Response $response */
 
-$utopia->get('/v1/mock/tests/general/oauth2')
-    ->desc('Mock an OAuth2 login route')
+        $response->noContent();
+    });
+
+App::get('/v1/mock/tests/general/400-error')
+    ->desc('400 Error')
+    ->groups(['mock'])
+    ->label('scope', 'public')
+    ->label('sdk.platform', [APP_PLATFORM_CLIENT, APP_PLATFORM_SERVER])
+    ->label('sdk.namespace', 'general')
+    ->label('sdk.method', 'error400')
+    ->label('sdk.description', 'Mock a an 400 failed request.')
+    ->label('sdk.response.code', Response::STATUS_CODE_BAD_REQUEST)
+    ->label('sdk.response.type', Response::CONTENT_TYPE_JSON)
+    ->label('sdk.response.model', Response::MODEL_ERROR)
+    ->label('sdk.mock', true)
+    ->action(function () {
+        throw new Exception('Mock 400 error', 400);
+    });
+
+App::get('/v1/mock/tests/general/500-error')
+    ->desc('500 Error')
+    ->groups(['mock'])
+    ->label('scope', 'public')
+    ->label('sdk.platform', [APP_PLATFORM_CLIENT, APP_PLATFORM_SERVER])
+    ->label('sdk.namespace', 'general')
+    ->label('sdk.method', 'error500')
+    ->label('sdk.description', 'Mock a an 500 failed request.')
+    ->label('sdk.response.code', Response::STATUS_CODE_INTERNAL_SERVER_ERROR)
+    ->label('sdk.response.type', Response::CONTENT_TYPE_JSON)
+    ->label('sdk.response.model', Response::MODEL_ERROR)
+    ->label('sdk.mock', true)
+    ->action(function () {
+        throw new Exception('Mock 500 error', 500);
+    });
+
+App::get('/v1/mock/tests/general/oauth2')
+    ->desc('OAuth Login')
+    ->groups(['mock'])
     ->label('scope', 'public')
     ->label('docs', false)
-    ->param('client_id', '', function () { return new Text(100); }, 'OAuth2 Client ID.')
-    ->param('redirect_uri', '', function () { return new Host(['localhost']); }, 'OAuth2 Redirect URI.') // Important to deny an open redirect attack
-    ->param('scope', '', function () { return new Text(100); }, 'OAuth2 scope list.')
-    ->param('state', '', function () { return new Text(1024); }, 'OAuth2 state.')
-    ->action(
-        function ($clientId, $redirectURI, $scope, $state) use ($response) {
-            $response->redirect($redirectURI.'?'.http_build_query(['code' => 'abcdef', 'state' => $state]));
-        }
-    );
+    ->label('sdk.mock', true)
+    ->param('client_id', '', new Text(100), 'OAuth2 Client ID.')
+    ->param('redirect_uri', '', new Host(['localhost']), 'OAuth2 Redirect URI.') // Important to deny an open redirect attack
+    ->param('scope', '', new Text(100), 'OAuth2 scope list.')
+    ->param('state', '', new Text(1024), 'OAuth2 state.')
+    ->inject('response')
+    ->action(function ($clientId, $redirectURI, $scope, $state, $response) {
+        /** @var Appwrite\Utopia\Response $response */
 
-$utopia->get('/v1/mock/tests/general/oauth2/token')
-    ->desc('Mock an OAuth2 login route')
+        $response->redirect($redirectURI.'?'.\http_build_query(['code' => 'abcdef', 'state' => $state]));
+    });
+
+App::get('/v1/mock/tests/general/oauth2/token')
+    ->desc('OAuth2 Token')
+    ->groups(['mock'])
     ->label('scope', 'public')
     ->label('docs', false)
-    ->param('client_id', '', function () { return new Text(100); }, 'OAuth2 Client ID.')
-    ->param('redirect_uri', '', function () { return new Host(['localhost']); }, 'OAuth2 Redirect URI.')
-    ->param('client_secret', '', function () { return new Text(100); }, 'OAuth2 scope list.')
-    ->param('code', '', function () { return new Text(100); }, 'OAuth2 state.')
-    ->action(
-        function ($clientId, $redirectURI, $clientSecret, $code) use ($response) {
-            if($clientId != '1') {
-                throw new Exception('Invalid client ID');
-            }
+    ->label('sdk.mock', true)
+    ->param('client_id', '', new Text(100), 'OAuth2 Client ID.')
+    ->param('redirect_uri', '', new Host(['localhost']), 'OAuth2 Redirect URI.')
+    ->param('client_secret', '', new Text(100), 'OAuth2 scope list.')
+    ->param('code', '', new Text(100), 'OAuth2 state.')
+    ->inject('response')
+    ->action(function ($clientId, $redirectURI, $clientSecret, $code, $response) {
+        /** @var Appwrite\Utopia\Response $response */
 
-            if($clientSecret != '123456') {
-                throw new Exception('Invalid client secret');
-            }
-
-            if($code != 'abcdef') {
-                throw new Exception('Invalid token');
-            }
-
-            $response->json(['access_token' => '123456']);
+        if ($clientId != '1') {
+            throw new Exception('Invalid client ID');
         }
-    );
 
-$utopia->get('/v1/mock/tests/general/oauth2/user')
-    ->desc('Mock an OAuth2 user route')
+        if ($clientSecret != '123456') {
+            throw new Exception('Invalid client secret');
+        }
+
+        if ($code != 'abcdef') {
+            throw new Exception('Invalid token');
+        }
+
+        $response->json(['access_token' => '123456']);
+    });
+
+App::get('/v1/mock/tests/general/oauth2/user')
+    ->desc('OAuth2 User')
+    ->groups(['mock'])
     ->label('scope', 'public')
     ->label('docs', false)
-    ->param('token', '', function () { return new Text(100); }, 'OAuth2 Access Token.')
-    ->action(
-        function ($token) use ($response) {
-            if($token != '123456') {
-                throw new Exception('Invalid token');
-            }
+    ->param('token', '', new Text(100), 'OAuth2 Access Token.')
+    ->inject('response')
+    ->action(function ($token, $response) {
+        /** @var Appwrite\Utopia\Response $response */
 
-            $response->json([
-                'id' => 1,
-                'name' => 'User Name',
-                'email' => 'user@localhost.test',
+        if ($token != '123456') {
+            throw new Exception('Invalid token');
+        }
+
+        $response->json([
+            'id' => 1,
+            'name' => 'User Name',
+            'email' => 'user@localhost.test',
+        ]);
+    });
+
+App::get('/v1/mock/tests/general/oauth2/success')
+    ->desc('OAuth2 Success')
+    ->groups(['mock'])
+    ->label('scope', 'public')
+    ->label('docs', false)
+    ->inject('response')
+    ->action(function ($response) {
+        /** @var Appwrite\Utopia\Response $response */
+
+        $response->json([
+            'result' => 'success',
+        ]);
+    });
+
+App::get('/v1/mock/tests/general/oauth2/failure')
+    ->desc('OAuth2 Failure')
+    ->groups(['mock'])
+    ->label('scope', 'public')
+    ->label('docs', false)
+    ->inject('response')
+    ->action(function ($response) {
+        /** @var Appwrite\Utopia\Response $response */
+
+        $response
+            ->setStatusCode(Response::STATUS_CODE_BAD_REQUEST)
+            ->json([
+                'result' => 'failure',
             ]);
-        }
-    );
+    });
 
-$utopia->get('/v1/mock/tests/general/oauth2/success')
-    ->label('scope', 'public')
-    ->label('docs', false)
-    ->action(
-        function () use ($response) {
-            $response->json([
-                'result' => 'success',
-            ]);
-        }
-    );
+App::shutdown(function($utopia, $response, $request) {
+    /** @var Utopia\App $utopia */
+    /** @var Utopia\Swoole\Request $request */
+    /** @var Appwrite\Utopia\Response $response */
 
-$utopia->get('/v1/mock/tests/general/oauth2/failure')
-    ->label('scope', 'public')
-    ->label('docs', false)
-    ->action(
-        function () use ($response) {
-            $response
-                ->setStatusCode(Response::STATUS_CODE_BAD_REQUEST)
-                ->json([
-                    'result' => 'failure',
-                ]);
-        }
-    );
-
-$utopia->shutdown(function() use ($response, $request, &$result, $utopia) {
-    
+    $result = [];
     $route  = $utopia->match($request);
     $path   = APP_STORAGE_CACHE.'/tests.json';
-    $tests  = (file_exists($path)) ? json_decode(file_get_contents($path), true) : [];
+    $tests  = (\file_exists($path)) ? \json_decode(\file_get_contents($path), true) : [];
     
-    if(!is_array($tests)) {
+    if (!\is_array($tests)) {
         throw new Exception('Failed to read results', 500);
     }
 
     $result[$route->getMethod() . ':' . $route->getURL()] = true;
 
-    $tests = array_merge($tests, $result);
+    $tests = \array_merge($tests, $result);
 
-    if(!file_put_contents($path, json_encode($tests), LOCK_EX)) {
+    if (!\file_put_contents($path, \json_encode($tests), LOCK_EX)) {
         throw new Exception('Failed to save resutls', 500);
     }
 
-    $response->json(['result' => $route->getMethod() . ':' . $route->getURL() . ':passed']);
-});
+    $response->dynamic(new Document(['result' => $route->getMethod() . ':' . $route->getURL() . ':passed']), Response::MODEL_MOCK);
+}, ['utopia', 'response', 'request'], 'mock');

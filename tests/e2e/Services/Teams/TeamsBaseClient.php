@@ -11,7 +11,7 @@ trait TeamsBaseClient
      */
     public function testGetTeamMemberships($data):array
     {
-        $teamUid = (isset($data['teamUid'])) ? $data['teamUid'] : '';
+        $teamUid = $data['teamUid'] ?? '';
 
         /**
          * Test for SUCCESS
@@ -22,16 +22,17 @@ trait TeamsBaseClient
         ], $this->getHeaders()));
 
         $this->assertEquals(200, $response['headers']['status-code']);
-        $this->assertNotEmpty($response['body'][0]['$id']);
-        $this->assertEquals($this->getUser()['name'], $response['body'][0]['name']);
-        $this->assertEquals($this->getUser()['email'], $response['body'][0]['email']);
-        $this->assertEquals('owner', $response['body'][0]['roles'][0]);
+        $this->assertIsInt($response['body']['sum']);
+        $this->assertNotEmpty($response['body']['memberships'][0]['$id']);
+        $this->assertEquals($this->getUser()['name'], $response['body']['memberships'][0]['name']);
+        $this->assertEquals($this->getUser()['email'], $response['body']['memberships'][0]['email']);
+        $this->assertEquals('owner', $response['body']['memberships'][0]['roles'][0]);
 
         /**
          * Test for FAILURE
          */
 
-         return $data;
+        return $data;
     }
 
     /**
@@ -39,8 +40,8 @@ trait TeamsBaseClient
      */
     public function testCreateTeamMembership($data):array
     {
-        $teamUid = (isset($data['teamUid'])) ? $data['teamUid'] : '';
-        $teamName = (isset($data['teamName'])) ? $data['teamName'] : '';
+        $teamUid = $data['teamUid'] ?? '';
+        $teamName = $data['teamName'] ?? '';
         $email = uniqid().'friend@localhost.test';
 
         /**
@@ -126,10 +127,10 @@ trait TeamsBaseClient
      */
     public function testUpdateTeamMembership($data):array
     {
-        $teamUid = (isset($data['teamUid'])) ? $data['teamUid'] : '';
-        $secret = (isset($data['secret'])) ? $data['secret'] : '';
-        $inviteUid = (isset($data['inviteUid'])) ? $data['inviteUid'] : '';
-        $userUid = (isset($data['userUid'])) ? $data['userUid'] : '';
+        $teamUid = $data['teamUid'] ?? '';
+        $secret = $data['secret'] ?? '';
+        $inviteUid = $data['inviteUid'] ?? '';
+        $userUid = $data['userUid'] ?? '';
 
         /**
          * Test for SUCCESS
@@ -206,8 +207,8 @@ trait TeamsBaseClient
      */
     public function testDeleteTeamMembership($data):array
     {
-        $teamUid = (isset($data['teamUid'])) ? $data['teamUid'] : '';
-        $inviteUid = (isset($data['inviteUid'])) ? $data['inviteUid'] : '';
+        $teamUid = $data['teamUid'] ?? '';
+        $inviteUid = $data['inviteUid'] ?? '';
         
         /**
          * Test for SUCCESS
@@ -231,7 +232,7 @@ trait TeamsBaseClient
         ], $this->getHeaders()));
 
         $this->assertEquals(200, $response['headers']['status-code']);
-        $this->assertCount(1, $response['body']);
+        $this->assertCount(1, $response['body']['memberships']);
 
         return [];
     }

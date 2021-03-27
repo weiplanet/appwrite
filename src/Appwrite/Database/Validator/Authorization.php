@@ -10,12 +10,12 @@ class Authorization extends Validator
     /**
      * @var array
      */
-    protected static $roles = ['*'];
+    static $roles = ['*' => true];
 
     /**
      * @var Document
      */
-    protected $document = null;
+    protected $document;
 
     /**
      * @var string
@@ -56,7 +56,7 @@ class Authorization extends Validator
      *
      * Returns true if valid or false if not.
      *
-     * @param array $permissions
+     * @param mixed $permissions
      *
      * @return bool
      */
@@ -75,32 +75,62 @@ class Authorization extends Validator
         $permission = null;
 
         foreach ($permissions[$this->action] as $permission) {
-            $permission = str_replace(':{self}', ':'.$this->document->getId(), $permission);
+            $permission = \str_replace(':{self}', ':'.$this->document->getId(), $permission);
 
-            if (in_array($permission, self::getRoles())) {
+            if (\array_key_exists($permission, self::$roles)) {
                 return true;
             }
         }
 
-        $this->message = 'User is missing '.$this->action.' for "'.$permission.'" permission. Only this scopes "'.json_encode(self::getRoles()).'" is given and only this are allowed "'.json_encode($permissions[$this->action]).'".';
+        $this->message = 'Missing "'.$this->action.'" permission for role "'.$permission.'". Only this scopes "'.\json_encode(self::getRoles()).'" are given and only this are allowed "'.\json_encode($permissions[$this->action]).'".';
 
         return false;
     }
 
     /**
      * @param string $role
+     *
+     * @return void
      */
-    public static function setRole($role)
+    public static function setRole(string $role): void
     {
-        self::$roles[] = $role;
+        self::$roles[$role] = true;
+    }
+
+    /**
+     * @param string $role
+     *
+     * @return void
+     */
+    public static function unsetRole(string $role): void
+    {
+        unset(self::$roles[$role]);
     }
 
     /**
      * @return array
      */
-    public static function getRoles()
+    public static function getRoles(): array
     {
-        return self::$roles;
+        return \array_keys(self::$roles);
+    }
+
+    /**
+     * @return void
+     */
+    public static function cleanRoles(): void
+    {
+        self::$roles = [];
+    }
+
+    /**
+     * @param string $role
+     * 
+     * @return bool
+     */
+    public static function isRole(string $role): bool
+    {
+        return (\array_key_exists($role, self::$roles));
     }
 
     /**
@@ -111,7 +141,7 @@ class Authorization extends Validator
     /**
      * Default value in case we need
      *  to reset Authorization status
-     * 
+     *
      * @var bool
      */
     public static $statusDefault = true;
@@ -119,33 +149,42 @@ class Authorization extends Validator
     /**
      * Change default status.
      * This will be used for the
-     *  value set on the self::reset() method 
+     *  value set on the self::reset() method
+     *
+     * @return void
      */
-    public static function setDefaultStatus($status) {
+    public static function setDefaultStatus($status): void
+    {
         self::$statusDefault = $status;
         self::$status = $status;
     }
 
     /**
-     *  Enable Authorization checks
+     * Enable Authorization checks
+     *
+     * @return void
      */
-    public static function enable()
+    public static function enable(): void
     {
         self::$status = true;
     }
 
     /**
      * Disable Authorization checks
+     *
+     * @return void
      */
-    public static function disable()
+    public static function disable(): void
     {
         self::$status = false;
     }
 
     /**
      * Disable Authorization checks
+     *
+     * @return void
      */
-    public static function reset()
+    public static function reset(): void
     {
         self::$status = self::$statusDefault;
     }

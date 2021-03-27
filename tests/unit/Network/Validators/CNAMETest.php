@@ -2,7 +2,7 @@
 
 namespace Appwrite\Tests;
 
-use Appwrite\Network\Validators\CNAME;
+use Appwrite\Network\Validator\CNAME;
 use PHPUnit\Framework\TestCase;
 
 class CNAMETest extends TestCase
@@ -12,12 +12,12 @@ class CNAMETest extends TestCase
      */
     protected $object = null;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->object = new CNAME('appwrite.io');
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
     }
 

@@ -1,16 +1,17 @@
 <?php
 
-use Utopia\Locale\Locale;
-
-$protocol   = $this->getParam('protocol', '');
-$domain     = $this->getParam('domain', '');
-$platforms  = $this->getParam('platforms', []);
-$version    = $this->getParam('version', '0.0.0');
-$isDev      = $this->getParam('isDev', false);
-$litespeed  = $this->getParam('litespeed', true);
-$analytics  = $this->getParam('analytics', 'UA-26264668-9');
-$env        = $this->getParam('env', '');
-$canonical  = $this->getParam('canonical', '');
+$protocol       = $this->getParam('protocol', '');
+$domain         = $this->getParam('domain', '');
+$endpoint       = $this->getParam('endpoint', '');
+$platforms      = $this->getParam('platforms', []);
+$version        = $this->getParam('version', '0.0.0');
+$isDev          = $this->getParam('isDev', false);
+$litespeed      = $this->getParam('litespeed', true);
+$analytics      = $this->getParam('analytics', 'UA-26264668-9');
+$mode           = $this->getParam('mode', '');
+$canonical      = $this->getParam('canonical', '');
+$locale         = $this->getParam('locale', null);
+$environments   = $this->getParam('environments', null);
 
 if(!empty($platforms)) {
     $platforms = array_map(function($platform) {
@@ -30,16 +31,15 @@ if(!empty($platforms)) {
 }
 
 ?><!DOCTYPE html><!--
-<?php echo Locale::getText('settings.inspire'); ?>
+<?php echo $locale->getText('settings.inspire'); ?>
 
---><html lang="<?php echo Locale::getText('settings.locale'); ?>" class="<?php echo $this->getParam('class', 'none'); ?>  <?php echo $env; ?>">
+--><html lang="<?php echo $locale->getText('settings.locale'); ?>" class="<?php echo $this->getParam('class', 'none'); ?>  <?php echo $mode; ?>">
 <head>
     <link rel="manifest" href="/manifest.json">
     <title><?php echo $this->getParam('title', ''); ?></title>
     <meta name="description" content="<?php echo $this->getParam('description', ''); ?>" />
-    <link rel="stylesheet" media="all" type="text/css" href="/dist/styles/default-<?php echo Locale::getText('settings.direction'); ?>.css?v=<?php echo APP_CACHE_BUSTER; ?>.<?php echo $version; ?>" />
+    <link rel="stylesheet" media="all" type="text/css" href="/dist/styles/default-<?php echo $locale->getText('settings.direction'); ?>.css?v=<?php echo APP_CACHE_BUSTER; ?>.<?php echo $version; ?>" />
     <link rel="icon" type="image/png" href="<?php echo $this->escape($this->getParam('icon', '')); ?>?v=<?php echo APP_CACHE_BUSTER; ?>" />
-    <link href="https://fonts.googleapis.com/css?family=Poppins:100,300,400,500,600" rel="stylesheet">
     <link rel="apple-touch-icon" href="/images/apple.png">
     <!-- <link rel="preconnect" href="" /> -->
     <?php if (!empty($canonical)): ?>
@@ -57,7 +57,7 @@ if(!empty($platforms)) {
     <?php if (!empty($canonical)): ?>
         <meta property="og:url" content="<?php echo $canonical; ?>" />
     <?php endif; ?>
-    <meta property="og:image"  content="<?php echo $protocol; ?>://<?php echo $domain; ?>/images/logo.png?v=<?php echo APP_CACHE_BUSTER; ?>" />
+    <meta property="og:image"  content="<?php echo $endpoint; ?>/images/logo.png?v=<?php echo APP_CACHE_BUSTER; ?>" />
     <script>
 
         (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
@@ -69,17 +69,20 @@ if(!empty($platforms)) {
 
         var APP_ENV = {
             NAME: '<?php echo APP_NAME; ?>',
-            VERSION: '<?php echo $version; ?>/<?php echo APP_CACHE_BUSTER; ?>',
+            VERSION: '<?php echo $version; ?>',
+            CACHEBUSTER: '<?php echo $version; ?>/<?php echo APP_CACHE_BUSTER; ?>',
             PROTOCOL: '<?php echo $protocol; ?>',
+            ENDPOINT: '<?php echo $endpoint; ?>',
             DOMAIN: '<?php echo $domain; ?>',
             HOME: '<?php echo $this->escape($this->getParam('home')); ?>',
             SETUP: '<?php echo $this->escape($this->getParam('setup')); ?>',
             API: '/v1',
             PROJECT: 'console',
+            ENVIRONMENTS: <?php echo json_encode($environments); ?>,
             PLATFORMS: <?php echo json_encode($platforms); ?>,
-            LOCALE: '<?php echo $this->escape(Locale::getText('settings.locale')); ?>',
+            LOCALE: '<?php echo $this->escape($locale->getText('settings.locale')); ?>',
             PREFIX: '<?php echo $this->escape($this->getParam('prefix')); ?>',
-            ROLES: <?PHP echo json_encode($this->getParam('roles', [])); ?>,
+            ROLES: <?php echo json_encode($this->getParam('roles', [])); ?>,
             PAGING_LIMIT: <?PHP echo APP_PAGING_LIMIT; ?>
         };
 
@@ -119,17 +122,18 @@ if(!empty($platforms)) {
 
     <div class="loader"></div>
 
-    <div data-cookie-policy="We are using cookies to make this website easier to use."></div>
+    <div data-cookies="We are using cookies to make this website easier to use."></div>
 
-    <section data-ls-ui-alerts="" class="alerts">
+    <section class="alerts">
         <ul data-ls-loop="alerts.list" data-ls-as="alert">
-            <li>
+            <li data-forms-remove>
                 <div data-ls-attrs="class={{alert.class}} message">
-                    <i class="icon-cancel" data-ls-ui-alerts-delete data-message="{{alert.id}}"></i>
+                    <i class="icon-cancel" data-forms-run="alert.remove"></i>
+                    
                     <span data-ls-bind="{{alert.text}}"></span>
 
                     <span data-ls-if="undefined !== {{alert.link}}">
-                        <a data-ls-attrs="href={{alert.link}}" data-ls-ui-alerts-delete data-message="{{alert.id}}">Learn More</a>
+                        <a data-ls-attrs="href={{alert.link}}" data-ls-bind="{{alert.label}}" data-remove></a>
                     </span>
                 </div>
             </li>

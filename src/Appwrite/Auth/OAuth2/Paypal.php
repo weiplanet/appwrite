@@ -10,30 +10,38 @@ use Appwrite\Auth\OAuth2;
 class Paypal extends OAuth2
 {
     /**
-     * @var string
+     * @var array
      */
-    private $endpoint= [
+    private $endpoint = [
         'sandbox' => 'https://www.sandbox.paypal.com/',
         'live' => 'https://www.paypal.com/',
     ];
 
+    /**
+     * @var array
+     */
     private $resourceEndpoint = [
         'sandbox' => 'https://api.sandbox.paypal.com/v1/',
         'live' => 'https://api.paypal.com/v1/',
     ];
 
-    private $environment = 'live';
+    /**
+     * @var string
+     */
+    protected $environment = 'live';
 
     /**
      * @var array
      */
     protected $user = [];
 
-
+    /**
+     * @var array
+     */
     protected $scopes = [
-            'openid',
-            'profile',
-            'email'
+        'openid',
+        'profile',
+        'email'
     ];
 
     /**
@@ -50,14 +58,14 @@ class Paypal extends OAuth2
     public function getLoginURL(): string
     {
         $url = $this->endpoint[$this->environment] . 'connect/?'.
-            http_build_query([
+            \http_build_query([
                 'flowEntry' => 'static',
                 'response_type' => 'code',
                 'client_id' => $this->appID,
-                'scope' => implode(' ', $this->getScopes()),
+                'scope' => \implode(' ', $this->getScopes()),
                 // paypal is not accepting localhost string into return uri
-                'redirect_uri' => str_replace("localhost", "127.0.0.1", $this->callback),
-                'state' => json_encode($this->state),
+                'redirect_uri' => \str_replace("localhost", "127.0.0.1", $this->callback),
+                'state' => \json_encode($this->state),
             ]);
 
         return $url;
@@ -73,15 +81,15 @@ class Paypal extends OAuth2
         $accessToken = $this->request(
             'POST',
             $this->resourceEndpoint[$this->environment] . 'oauth2/token',
-            ['Authorization: Basic ' . base64_encode($this->appID . ':' . $this->appSecret)],
-            http_build_query([
+            ['Authorization: Basic ' . \base64_encode($this->appID . ':' . $this->appSecret)],
+            \http_build_query([
                 'code' => $code,
                 'grant_type' => 'authorization_code',
             ])
         );
 
 
-        $accessToken = json_decode($accessToken, true);
+        $accessToken = \json_decode($accessToken, true);
 
 
         if (isset($accessToken['access_token'])) {
@@ -148,7 +156,7 @@ class Paypal extends OAuth2
     {
         $header = [
             'Content-Type: application/json',
-            'Authorization: Bearer '.urlencode($accessToken),
+            'Authorization: Bearer '.\urlencode($accessToken),
         ];
         if (empty($this->user)) {
             $user = $this->request(
@@ -156,7 +164,7 @@ class Paypal extends OAuth2
                 $this->resourceEndpoint[$this->environment] . 'identity/oauth2/userinfo?schema=paypalv1.1',
                 $header
             );
-            $this->user = json_decode($user, true);
+            $this->user = \json_decode($user, true);
         }
 
         return $this->user;

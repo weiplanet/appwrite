@@ -6,6 +6,7 @@
       let buttonClass = element.dataset["buttonClass"] || "ls-ui-open";
       let buttonText = element.dataset["buttonText"] || "";
       let buttonIcon = element.dataset["buttonIcon"] || "";
+      let buttonAria = element.dataset["buttonAria"] || "Open";
       let buttonSelector = element.dataset["buttonSelector"] || "";
       let hover = element.hasAttribute("data-hover");
       let blur = element.hasAttribute("data-blur");
@@ -19,7 +20,7 @@
 
       button.innerText = buttonText;
       button.className = buttonClass;
-      button.tabIndex = 1;
+      // button.tabIndex = 1;
       button.type = "button";
 
       if (buttonIcon) {
@@ -28,6 +29,10 @@
         icon.className = buttonIcon;
 
         button.insertBefore(icon, button.firstChild);
+      }
+
+      if(buttonAria) {
+        button.setAttribute('aria-label', buttonAria);
       }
 
       if (def === "close") {
@@ -63,7 +68,7 @@
       let closeDelay = function() {
         window.setTimeout(function() {
           close();
-        }, 150);
+        }, 400);
       };
 
       let findParent = function(tagName, el) {
@@ -101,14 +106,20 @@
         });
       }
 
-      element.addEventListener("click", function(event) {
-        let target = findParent("a", event.target);
+      element.addEventListener('click', function(event) {
+        let targetA = findParent('a', event.target);
+        let targetB = findParent('button', event.target);
 
-        if (!target) {
+        if (!targetA && !targetB) {
           return false; // no target
         }
+        
+        if (targetA && !targetA.href) {
+          // Just a normal click not an href
+          return false;
+        }
 
-        if (!target.href) {
+        if (targetB && !targetB.classList.contains('link')) {
           // Just a normal click not an href
           return false;
         }

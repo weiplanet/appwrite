@@ -16,13 +16,13 @@ class Auth
     /**
      * User Roles.
      */
-    const USER_ROLE_GUEST = 0;
-    const USER_ROLE_MEMBER = 1;
-    const USER_ROLE_ADMIN = 2;
-    const USER_ROLE_DEVELOPER = 3;
-    const USER_ROLE_OWNER = 4;
-    const USER_ROLE_APP = 5;
-    const USER_ROLE_SYSTEM = 6;
+    const USER_ROLE_GUEST = 'guest';
+    const USER_ROLE_MEMBER = 'member';
+    const USER_ROLE_ADMIN = 'admin';
+    const USER_ROLE_DEVELOPER = 'developer';
+    const USER_ROLE_OWNER = 'owner';
+    const USER_ROLE_APP = 'app';
+    const USER_ROLE_SYSTEM = 'system';
     const USER_ROLE_ALL = '*';
 
     /**
@@ -49,9 +49,9 @@ class Auth
     /**
      * User Unique ID.
      *
-     * @var int
+     * @var string
      */
-    public static $unique = 0;
+    public static $unique = '';
 
     /**
      * User Secret Key.
@@ -75,14 +75,14 @@ class Auth
     /**
      * Encode Session.
      *
-     * @param int    $id
+     * @param string $id
      * @param string $secret
      *
      * @return string
      */
     public static function encodeSession($id, $secret)
     {
-        return base64_encode(json_encode([
+        return \base64_encode(\json_encode([
             'id' => $id,
             'secret' => $secret,
         ]));
@@ -99,14 +99,14 @@ class Auth
      */
     public static function decodeSession($session)
     {
-        $session = json_decode(base64_decode($session), true);
+        $session = \json_decode(\base64_decode($session), true);
         $default = ['id' => null, 'secret' => ''];
 
-        if (!is_array($session)) {
+        if (!\is_array($session)) {
             return $default;
         }
 
-        return array_merge($default, $session);
+        return \array_merge($default, $session);
     }
 
     /**
@@ -118,9 +118,9 @@ class Auth
      *
      * @return string
      */
-    public static function hash($string)
+    public static function hash(string $string)
     {
-        return hash('sha256', $string);
+        return \hash('sha256', $string);
     }
 
     /**
@@ -130,11 +130,11 @@ class Auth
      *
      * @param $string
      *
-     * @return bool|string
+     * @return bool|string|null
      */
     public static function passwordHash($string)
     {
-        return password_hash($string, PASSWORD_BCRYPT, array('cost' => 8));
+        return \password_hash($string, PASSWORD_BCRYPT, array('cost' => 8));
     }
 
     /**
@@ -147,7 +147,7 @@ class Auth
      */
     public static function passwordVerify($plain, $hash)
     {
-        return password_verify($plain, $hash);
+        return \password_verify($plain, $hash);
     }
 
     /**
@@ -163,7 +163,7 @@ class Auth
      */
     public static function passwordGenerator(int $length = 20):string
     {
-        return bin2hex(random_bytes($length));
+        return \bin2hex(\random_bytes($length));
     }
 
     /**
@@ -179,7 +179,7 @@ class Auth
      */
     public static function tokenGenerator(int $length = 128):string
     {
-        return bin2hex(random_bytes($length));
+        return \bin2hex(\random_bytes($length));
     }
 
     /**
@@ -193,15 +193,51 @@ class Auth
      */
     public static function tokenVerify(array $tokens, int $type, string $secret)
     {
-        foreach ($tokens as $token) { /* @var $token Document */
-            if (isset($token['type']) &&
-               isset($token['secret']) &&
-               isset($token['expire']) &&
-               $token['type'] == $type &&
-               $token['secret'] === self::hash($secret) &&
-               $token['expire']  >= time()) {
-                return $token->getId();
+        foreach ($tokens as $token) { /** @var Document $token */
+            if ($token->isSet('type') &&
+                $token->isSet('secret') &&
+                $token->isSet('expire') &&
+                $token->getAttribute('type') == $type &&
+                $token->getAttribute('secret') === self::hash($secret) &&
+                $token->getAttribute('expire') >= \time()) {
+                return (string)$token->getId();
             }
+        }
+
+        return false;
+    }
+
+    /**
+     * Is Previligged User?
+     * 
+     * @param array $roles
+     * 
+     * @return bool
+     */
+    public static function isPreviliggedUser(array $roles): bool
+    {
+        if(
+            array_key_exists('role:'.self::USER_ROLE_OWNER, $roles) ||
+            array_key_exists('role:'.self::USER_ROLE_DEVELOPER, $roles) ||
+            array_key_exists('role:'.self::USER_ROLE_ADMIN, $roles)
+        ) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Is App User?
+     * 
+     * @param array $roles
+     * 
+     * @return bool
+     */
+    public static function isAppUser(array $roles): bool
+    {
+        if(array_key_exists('role:'.self::USER_ROLE_APP, $roles)) {
+            return true;
         }
 
         return false;

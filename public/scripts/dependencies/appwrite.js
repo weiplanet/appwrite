@@ -139,9 +139,9 @@
                 globalParams.push({key: key, value: value});
             };
 
-            addGlobalHeader('x-sdk-version', 'appwrite:javascript:1.0.0');
+            addGlobalHeader('x-sdk-version', 'appwrite:web:1.0.0');
             addGlobalHeader('content-type', '');
-
+    
             /**
              * @param {string} method
              * @param {string} path string
@@ -226,28 +226,27 @@
                     }
 
                     request.onload = function () {
+                        let data = request.response;
+                        let contentType = this.getResponseHeader('content-type') || '';
+                        contentType = contentType.substring(0, contentType.indexOf(';'));
+
+                        switch (contentType) {
+                            case 'application/json':
+                                data = JSON.parse(data);
+                                break;
+                        }
+
+                        let cookieFallback = this.getResponseHeader('X-Fallback-Cookies') || '';
+                        
+                        if(window.localStorage && cookieFallback) {
+                            window.console.warn('Appwrite is using localStorage for session management. Increase your security by adding a custom domain as your API endpoint.');
+                            window.localStorage.setItem('cookieFallback', cookieFallback);
+                        }
+
                         if (4 === request.readyState && 399 >= request.status) {
-                            let data = request.response;
-                            let contentType = this.getResponseHeader('content-type') || '';
-                            contentType = contentType.substring(0, contentType.indexOf(';'));
-
-                            switch (contentType) {
-                                case 'application/json':
-                                    data = JSON.parse(data);
-                                    break;
-                            }
-
-                            let cookieFallback = this.getResponseHeader('X-Fallback-Cookies') || '';
-                            
-                            if(window.localStorage && cookieFallback) {
-                                window.console.warn('Appwrite is using localStorage for session management. Increase your security by adding a custom domain as your API endpoint.');
-                                window.localStorage.setItem('cookieFallback', cookieFallback);
-                            }
-
                             resolve(data);
-
                         } else {
-                            reject(new Error(request.statusText));
+                            reject(data);
                         }
                     };
 
@@ -286,28 +285,6 @@
             }
         }(window.document);
 
-        let iframe = function(method, url, params) {
-            let form = document.createElement('form');
-
-            form.setAttribute('method', method);
-            form.setAttribute('action', config.endpoint + url);
-
-            for(let key in params) {
-                if(params.hasOwnProperty(key)) {
-                    let hiddenField = document.createElement("input");
-                    hiddenField.setAttribute("type", "hidden");
-                    hiddenField.setAttribute("name", key);
-                    hiddenField.setAttribute("value", params[key]);
-
-                    form.appendChild(hiddenField);
-                }
-            }
-
-            document.body.appendChild(form);
-
-            return form.submit();
-        };
-
         let account = {
 
             /**
@@ -334,10 +311,10 @@
              *
              * Use this endpoint to allow a new user to register a new account in your
              * project. After the user registration completes successfully, you can use
-             * the [/account/verfication](/docs/account#createVerification) route to start
-             * verifying the user email address. To allow your new user to login to his
-             * new account, you need to create a new [account
-             * session](/docs/account#createSession).
+             * the [/account/verfication](/docs/client/account#createVerification) route
+             * to start verifying the user email address. To allow the new user to login
+             * to their new account, you need to create a new [account
+             * session](/docs/client/account#createSession).
              *
              * @param {string} email
              * @param {string} password
@@ -440,6 +417,28 @@
             },
 
             /**
+             * Create Account JWT
+             *
+             * Use this endpoint to create a JSON Web Token. You can use the resulting JWT
+             * to authenticate on behalf of the current user when working with the
+             * Appwrite server-side API and SDKs. The JWT secret is valid for 15 minutes
+             * from its creation and will be invalid if the user will logout.
+             *
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            createJWT: function() {
+                let path = '/account/jwt';
+
+                let payload = {};
+
+                return http
+                    .post(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
              * Get Account Logs
              *
              * Get currently logged in user list of latest security activity logs. Each
@@ -516,7 +515,7 @@
                 }
 
                 if(oldPassword) {
-                    payload['old-password'] = oldPassword;
+                    payload['oldPassword'] = oldPassword;
                 }
 
                 return http
@@ -580,7 +579,7 @@
              * When the user clicks the confirmation link he is redirected back to your
              * app password reset URL with the secret key and email address values
              * attached to the URL query string. Use the query string params to submit a
-             * request to the [PUT /account/recovery](/docs/account#updateRecovery)
+             * request to the [PUT /account/recovery](/docs/client/account#updateRecovery)
              * endpoint to complete the process.
              *
              * @param {string} email
@@ -621,7 +620,7 @@
              * Use this endpoint to complete the user account password reset. Both the
              * **userId** and **secret** arguments will be passed as query parameters to
              * the redirect URL you have provided when sending your request to the [POST
-             * /account/recovery](/docs/account#createRecovery) endpoint.
+             * /account/recovery](/docs/client/account#createRecovery) endpoint.
              * 
              * Please note that in order to avoid a [Redirect
              * Attack](https://github.com/OWASP/CheatSheetSeries/blob/master/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.md)
@@ -630,12 +629,12 @@
              *
              * @param {string} userId
              * @param {string} secret
-             * @param {string} passwordA
-             * @param {string} passwordB
+             * @param {string} password
+             * @param {string} passwordAgain
              * @throws {Error}
              * @return {Promise}             
              */
-            updateRecovery: function(userId, secret, passwordA, passwordB) {
+            updateRecovery: function(userId, secret, password, passwordAgain) {
                 if(userId === undefined) {
                     throw new Error('Missing required parameter: "userId"');
                 }
@@ -644,12 +643,12 @@
                     throw new Error('Missing required parameter: "secret"');
                 }
                 
-                if(passwordA === undefined) {
-                    throw new Error('Missing required parameter: "passwordA"');
+                if(password === undefined) {
+                    throw new Error('Missing required parameter: "password"');
                 }
                 
-                if(passwordB === undefined) {
-                    throw new Error('Missing required parameter: "passwordB"');
+                if(passwordAgain === undefined) {
+                    throw new Error('Missing required parameter: "passwordAgain"');
                 }
                 
                 let path = '/account/recovery';
@@ -664,12 +663,12 @@
                     payload['secret'] = secret;
                 }
 
-                if(passwordA) {
-                    payload['password-a'] = passwordA;
+                if(password) {
+                    payload['password'] = password;
                 }
 
-                if(passwordB) {
-                    payload['password-b'] = passwordB;
+                if(passwordAgain) {
+                    payload['passwordAgain'] = passwordAgain;
                 }
 
                 return http
@@ -701,7 +700,7 @@
             /**
              * Create Account Session
              *
-             * Allow the user to login into his account by providing a valid email and
+             * Allow the user to login into their account by providing a valid email and
              * password combination. This route will create a new session for the user.
              *
              * @param {string} email
@@ -759,7 +758,7 @@
             /**
              * Create Account Session with OAuth2
              *
-             * Allow the user to login to his account using the OAuth2 provider of his
+             * Allow the user to login to their account using the OAuth2 provider of their
              * choice. Each OAuth2 provider should be enabled from the Appwrite console
              * first. Use the success and failure arguments to provide a redirect URL's
              * back to your app when login is completed.
@@ -767,20 +766,13 @@
              * @param {string} provider
              * @param {string} success
              * @param {string} failure
+             * @param {string[]} scopes
              * @throws {Error}
-             * @return {string}             
+             * @return {Promise}             
              */
-            createOAuth2Session: function(provider, success, failure) {
+            createOAuth2Session: function(provider, success = 'https://appwrite.io/auth/oauth2/success', failure = 'https://appwrite.io/auth/oauth2/failure', scopes = []) {
                 if(provider === undefined) {
                     throw new Error('Missing required parameter: "provider"');
-                }
-                
-                if(success === undefined) {
-                    throw new Error('Missing required parameter: "success"');
-                }
-                
-                if(failure === undefined) {
-                    throw new Error('Missing required parameter: "failure"');
                 }
                 
                 let path = '/account/sessions/oauth2/{provider}'.replace(new RegExp('{provider}', 'g'), provider);
@@ -795,21 +787,40 @@
                     payload['failure'] = failure;
                 }
 
+                if(scopes) {
+                    payload['scopes'] = scopes;
+                }
+
                 payload['project'] = config.project;
 
                 payload['key'] = config.key;
 
-                let query = Object.keys(payload).map(key => key + '=' + encodeURIComponent(payload[key])).join('&');
 
-                return config.endpoint + path + ((query) ? '?' + query : '');
+                let query = [];
+
+                for (let p in payload) {
+                    if(Array.isArray(payload[p])) {
+                        for (let index = 0; index < payload[p].length; index++) {
+                            let param = payload[p][index];
+                            query.push(encodeURIComponent(p + '[]') + "=" + encodeURIComponent(param));
+                        }
+                    }
+                    else {
+                        query.push(encodeURIComponent(p) + "=" + encodeURIComponent(payload[p]));
+                    }
+                }
+
+                query =  query.join("&");
+                
+                window.location = config.endpoint + path + ((query) ? '?' + query : '');
             },
 
             /**
              * Delete Account Session
              *
-             * Use this endpoint to log out the currently logged in user from all his
-             * account sessions across all his different devices. When using the option id
-             * argument, only the session unique ID provider will be deleted.
+             * Use this endpoint to log out the currently logged in user from all their
+             * account sessions across all of their different devices. When using the
+             * option id argument, only the session unique ID provider will be deleted.
              *
              * @param {string} sessionId
              * @throws {Error}
@@ -836,16 +847,17 @@
              * Use this endpoint to send a verification message to your user email address
              * to confirm they are the valid owners of that address. Both the **userId**
              * and **secret** arguments will be passed as query parameters to the URL you
-             * have provider to be attached to the verification email. The provided URL
-             * should redirect the user back for your app and allow you to complete the
+             * have provided to be attached to the verification email. The provided URL
+             * should redirect the user back to your app and allow you to complete the
              * verification process by verifying both the **userId** and **secret**
              * parameters. Learn more about how to [complete the verification
-             * process](/docs/account#updateAccountVerification). 
+             * process](/docs/client/account#updateVerification). 
              * 
              * Please note that in order to avoid a [Redirect
-             * Attack](https://github.com/OWASP/CheatSheetSeries/blob/master/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.md)
+             * Attack](https://github.com/OWASP/CheatSheetSeries/blob/master/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.md),
              * the only valid redirect URLs are the ones from domains you have set when
              * adding your platforms in the console interface.
+             * 
              *
              * @param {string} url
              * @throws {Error}
@@ -926,7 +938,7 @@
              * @param {number} height
              * @param {number} quality
              * @throws {Error}
-             * @return {Promise}             
+             * @return {string}             
              */
             getBrowser: function(code, width = 100, height = 100, quality = 100) {
                 if(code === undefined) {
@@ -949,26 +961,43 @@
                     payload['quality'] = quality;
                 }
 
-                return http
-                    .get(path, {
-                        'content-type': 'application/json',
-                    }, payload);
+                payload['project'] = config.project;
+
+                payload['key'] = config.key;
+
+
+                let query = [];
+
+                for (let p in payload) {
+                    if(Array.isArray(payload[p])) {
+                        for (let index = 0; index < payload[p].length; index++) {
+                            let param = payload[p][index];
+                            query.push(encodeURIComponent(p + '[]') + "=" + encodeURIComponent(param));
+                        }
+                    }
+                    else {
+                        query.push(encodeURIComponent(p) + "=" + encodeURIComponent(payload[p]));
+                    }
+                }
+
+                query =  query.join("&");
+                
+                return config.endpoint + path + ((query) ? '?' + query : '');
             },
 
             /**
              * Get Credit Card Icon
              *
-             * Need to display your users with your billing method or their payment
-             * methods? The credit card endpoint will return you the icon of the credit
-             * card provider you need. Use width, height and quality arguments to change
-             * the output settings.
+             * The credit card endpoint will return you the icon of the credit card
+             * provider you need. Use width, height and quality arguments to change the
+             * output settings.
              *
              * @param {string} code
              * @param {number} width
              * @param {number} height
              * @param {number} quality
              * @throws {Error}
-             * @return {Promise}             
+             * @return {string}             
              */
             getCreditCard: function(code, width = 100, height = 100, quality = 100) {
                 if(code === undefined) {
@@ -991,21 +1020,40 @@
                     payload['quality'] = quality;
                 }
 
-                return http
-                    .get(path, {
-                        'content-type': 'application/json',
-                    }, payload);
+                payload['project'] = config.project;
+
+                payload['key'] = config.key;
+
+
+                let query = [];
+
+                for (let p in payload) {
+                    if(Array.isArray(payload[p])) {
+                        for (let index = 0; index < payload[p].length; index++) {
+                            let param = payload[p][index];
+                            query.push(encodeURIComponent(p + '[]') + "=" + encodeURIComponent(param));
+                        }
+                    }
+                    else {
+                        query.push(encodeURIComponent(p) + "=" + encodeURIComponent(payload[p]));
+                    }
+                }
+
+                query =  query.join("&");
+                
+                return config.endpoint + path + ((query) ? '?' + query : '');
             },
 
             /**
              * Get Favicon
              *
-             * Use this endpoint to fetch the favorite icon (AKA favicon) of a  any remote
+             * Use this endpoint to fetch the favorite icon (AKA favicon) of any remote
              * website URL.
+             * 
              *
              * @param {string} url
              * @throws {Error}
-             * @return {Promise}             
+             * @return {string}             
              */
             getFavicon: function(url) {
                 if(url === undefined) {
@@ -1020,10 +1068,28 @@
                     payload['url'] = url;
                 }
 
-                return http
-                    .get(path, {
-                        'content-type': 'application/json',
-                    }, payload);
+                payload['project'] = config.project;
+
+                payload['key'] = config.key;
+
+
+                let query = [];
+
+                for (let p in payload) {
+                    if(Array.isArray(payload[p])) {
+                        for (let index = 0; index < payload[p].length; index++) {
+                            let param = payload[p][index];
+                            query.push(encodeURIComponent(p + '[]') + "=" + encodeURIComponent(param));
+                        }
+                    }
+                    else {
+                        query.push(encodeURIComponent(p) + "=" + encodeURIComponent(payload[p]));
+                    }
+                }
+
+                query =  query.join("&");
+                
+                return config.endpoint + path + ((query) ? '?' + query : '');
             },
 
             /**
@@ -1038,7 +1104,7 @@
              * @param {number} height
              * @param {number} quality
              * @throws {Error}
-             * @return {Promise}             
+             * @return {string}             
              */
             getFlag: function(code, width = 100, height = 100, quality = 100) {
                 if(code === undefined) {
@@ -1061,10 +1127,28 @@
                     payload['quality'] = quality;
                 }
 
-                return http
-                    .get(path, {
-                        'content-type': 'application/json',
-                    }, payload);
+                payload['project'] = config.project;
+
+                payload['key'] = config.key;
+
+
+                let query = [];
+
+                for (let p in payload) {
+                    if(Array.isArray(payload[p])) {
+                        for (let index = 0; index < payload[p].length; index++) {
+                            let param = payload[p][index];
+                            query.push(encodeURIComponent(p + '[]') + "=" + encodeURIComponent(param));
+                        }
+                    }
+                    else {
+                        query.push(encodeURIComponent(p) + "=" + encodeURIComponent(payload[p]));
+                    }
+                }
+
+                query =  query.join("&");
+                
+                return config.endpoint + path + ((query) ? '?' + query : '');
             },
 
             /**
@@ -1079,7 +1163,7 @@
              * @param {number} width
              * @param {number} height
              * @throws {Error}
-             * @return {Promise}             
+             * @return {string}             
              */
             getImage: function(url, width = 400, height = 400) {
                 if(url === undefined) {
@@ -1102,10 +1186,99 @@
                     payload['height'] = height;
                 }
 
-                return http
-                    .get(path, {
-                        'content-type': 'application/json',
-                    }, payload);
+                payload['project'] = config.project;
+
+                payload['key'] = config.key;
+
+
+                let query = [];
+
+                for (let p in payload) {
+                    if(Array.isArray(payload[p])) {
+                        for (let index = 0; index < payload[p].length; index++) {
+                            let param = payload[p][index];
+                            query.push(encodeURIComponent(p + '[]') + "=" + encodeURIComponent(param));
+                        }
+                    }
+                    else {
+                        query.push(encodeURIComponent(p) + "=" + encodeURIComponent(payload[p]));
+                    }
+                }
+
+                query =  query.join("&");
+                
+                return config.endpoint + path + ((query) ? '?' + query : '');
+            },
+
+            /**
+             * Get User Initials
+             *
+             * Use this endpoint to show your user initials avatar icon on your website or
+             * app. By default, this route will try to print your logged-in user name or
+             * email initials. You can also overwrite the user name if you pass the 'name'
+             * parameter. If no name is given and no user is logged, an empty avatar will
+             * be returned.
+             * 
+             * You can use the color and background params to change the avatar colors. By
+             * default, a random theme will be selected. The random theme will persist for
+             * the user's initials when reloading the same theme will always return for
+             * the same initials.
+             *
+             * @param {string} name
+             * @param {number} width
+             * @param {number} height
+             * @param {string} color
+             * @param {string} background
+             * @throws {Error}
+             * @return {string}             
+             */
+            getInitials: function(name = '', width = 500, height = 500, color = '', background = '') {
+                let path = '/avatars/initials';
+
+                let payload = {};
+
+                if(name) {
+                    payload['name'] = name;
+                }
+
+                if(width) {
+                    payload['width'] = width;
+                }
+
+                if(height) {
+                    payload['height'] = height;
+                }
+
+                if(color) {
+                    payload['color'] = color;
+                }
+
+                if(background) {
+                    payload['background'] = background;
+                }
+
+                payload['project'] = config.project;
+
+                payload['key'] = config.key;
+
+
+                let query = [];
+
+                for (let p in payload) {
+                    if(Array.isArray(payload[p])) {
+                        for (let index = 0; index < payload[p].length; index++) {
+                            let param = payload[p][index];
+                            query.push(encodeURIComponent(p + '[]') + "=" + encodeURIComponent(param));
+                        }
+                    }
+                    else {
+                        query.push(encodeURIComponent(p) + "=" + encodeURIComponent(payload[p]));
+                    }
+                }
+
+                query =  query.join("&");
+                
+                return config.endpoint + path + ((query) ? '?' + query : '');
             },
 
             /**
@@ -1117,11 +1290,11 @@
              * @param {string} text
              * @param {number} size
              * @param {number} margin
-             * @param {number} download
+             * @param {boolean} download
              * @throws {Error}
-             * @return {Promise}             
+             * @return {string}             
              */
-            getQR: function(text, size = 400, margin = 1, download = 0) {
+            getQR: function(text, size = 400, margin = 1, download = false) {
                 if(text === undefined) {
                     throw new Error('Missing required parameter: "text"');
                 }
@@ -1146,10 +1319,28 @@
                     payload['download'] = download;
                 }
 
-                return http
-                    .get(path, {
-                        'content-type': 'application/json',
-                    }, payload);
+                payload['project'] = config.project;
+
+                payload['key'] = config.key;
+
+
+                let query = [];
+
+                for (let p in payload) {
+                    if(Array.isArray(payload[p])) {
+                        for (let index = 0; index < payload[p].length; index++) {
+                            let param = payload[p][index];
+                            query.push(encodeURIComponent(p + '[]') + "=" + encodeURIComponent(param));
+                        }
+                    }
+                    else {
+                        query.push(encodeURIComponent(p) + "=" + encodeURIComponent(payload[p]));
+                    }
+                }
+
+                query =  query.join("&");
+                
+                return config.endpoint + path + ((query) ? '?' + query : '');
             }
         };
 
@@ -1160,7 +1351,7 @@
              *
              * Get a list of all the user collections. You can use the query params to
              * filter your results. On admin mode, this endpoint will return a list of all
-             * of the project collections. [Learn more about different API
+             * of the project's collections. [Learn more about different API
              * modes](/docs/admin).
              *
              * @param {string} search
@@ -1203,9 +1394,9 @@
              * Create a new Collection.
              *
              * @param {string} name
-             * @param {array} read
-             * @param {array} write
-             * @param {array} rules
+             * @param {string[]} read
+             * @param {string[]} write
+             * @param {string[]} rules
              * @throws {Error}
              * @return {Promise}             
              */
@@ -1255,7 +1446,7 @@
             /**
              * Get Collection
              *
-             * Get collection by its unique ID. This endpoint response returns a JSON
+             * Get a collection by its unique ID. This endpoint response returns a JSON
              * object with the collection metadata.
              *
              * @param {string} collectionId
@@ -1280,13 +1471,13 @@
             /**
              * Update Collection
              *
-             * Update collection by its unique ID.
+             * Update a collection by its unique ID.
              *
              * @param {string} collectionId
              * @param {string} name
-             * @param {array} read
-             * @param {array} write
-             * @param {array} rules
+             * @param {string[]} read
+             * @param {string[]} write
+             * @param {string[]} rules
              * @throws {Error}
              * @return {Promise}             
              */
@@ -1363,23 +1554,21 @@
              *
              * Get a list of all the user documents. You can use the query params to
              * filter your results. On admin mode, this endpoint will return a list of all
-             * of the project documents. [Learn more about different API
+             * of the project's documents. [Learn more about different API
              * modes](/docs/admin).
              *
              * @param {string} collectionId
-             * @param {array} filters
-             * @param {number} offset
+             * @param {string[]} filters
              * @param {number} limit
+             * @param {number} offset
              * @param {string} orderField
              * @param {string} orderType
              * @param {string} orderCast
              * @param {string} search
-             * @param {number} first
-             * @param {number} last
              * @throws {Error}
              * @return {Promise}             
              */
-            listDocuments: function(collectionId, filters = [], offset = 0, limit = 50, orderField = '$id', orderType = 'ASC', orderCast = 'string', search = '', first = 0, last = 0) {
+            listDocuments: function(collectionId, filters = [], limit = 25, offset = 0, orderField = '', orderType = 'ASC', orderCast = 'string', search = '') {
                 if(collectionId === undefined) {
                     throw new Error('Missing required parameter: "collectionId"');
                 }
@@ -1392,36 +1581,28 @@
                     payload['filters'] = filters;
                 }
 
-                if(offset) {
-                    payload['offset'] = offset;
-                }
-
                 if(limit) {
                     payload['limit'] = limit;
                 }
 
+                if(offset) {
+                    payload['offset'] = offset;
+                }
+
                 if(orderField) {
-                    payload['order-field'] = orderField;
+                    payload['orderField'] = orderField;
                 }
 
                 if(orderType) {
-                    payload['order-type'] = orderType;
+                    payload['orderType'] = orderType;
                 }
 
                 if(orderCast) {
-                    payload['order-cast'] = orderCast;
+                    payload['orderCast'] = orderCast;
                 }
 
                 if(search) {
                     payload['search'] = search;
-                }
-
-                if(first) {
-                    payload['first'] = first;
-                }
-
-                if(last) {
-                    payload['last'] = last;
                 }
 
                 return http
@@ -1433,12 +1614,15 @@
             /**
              * Create Document
              *
-             * Create a new Document.
+             * Create a new Document. Before using this route, you should create a new
+             * collection resource using either a [server
+             * integration](/docs/server/database?sdk=nodejs#createCollection) API or
+             * directly from your database console.
              *
              * @param {string} collectionId
              * @param {object} data
-             * @param {array} read
-             * @param {array} write
+             * @param {string[]} read
+             * @param {string[]} write
              * @param {string} parentDocument
              * @param {string} parentProperty
              * @param {string} parentPropertyType
@@ -1499,8 +1683,8 @@
             /**
              * Get Document
              *
-             * Get document by its unique ID. This endpoint response returns a JSON object
-             * with the document data.
+             * Get a document by its unique ID. This endpoint response returns a JSON
+             * object with the document data.
              *
              * @param {string} collectionId
              * @param {string} documentId
@@ -1529,12 +1713,14 @@
             /**
              * Update Document
              *
+             * Update a document by its unique ID. Using the patch method you can pass
+             * only specific fields that will get updated.
              *
              * @param {string} collectionId
              * @param {string} documentId
              * @param {object} data
-             * @param {array} read
-             * @param {array} write
+             * @param {string[]} read
+             * @param {string[]} write
              * @throws {Error}
              * @return {Promise}             
              */
@@ -1584,8 +1770,8 @@
             /**
              * Delete Document
              *
-             * Delete document by its unique ID. This endpoint deletes only the parent
-             * documents, his attributes and relations to other documents. Child documents
+             * Delete a document by its unique ID. This endpoint deletes only the parent
+             * documents, its attributes and relations to other documents. Child documents
              * **will not** be deleted.
              *
              * @param {string} collectionId
@@ -1608,6 +1794,790 @@
 
                 return http
                     .delete(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            }
+        };
+
+        let functions = {
+
+            /**
+             * List Functions
+             *
+             * Get a list of all the project's functions. You can use the query params to
+             * filter your results.
+             *
+             * @param {string} search
+             * @param {number} limit
+             * @param {number} offset
+             * @param {string} orderType
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            list: function(search = '', limit = 25, offset = 0, orderType = 'ASC') {
+                let path = '/functions';
+
+                let payload = {};
+
+                if(search) {
+                    payload['search'] = search;
+                }
+
+                if(limit) {
+                    payload['limit'] = limit;
+                }
+
+                if(offset) {
+                    payload['offset'] = offset;
+                }
+
+                if(orderType) {
+                    payload['orderType'] = orderType;
+                }
+
+                return http
+                    .get(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
+             * Create Function
+             *
+             * Create a new function. You can pass a list of
+             * [permissions](/docs/permissions) to allow different project users or team
+             * with access to execute the function using the client API.
+             *
+             * @param {string} name
+             * @param {string[]} execute
+             * @param {string} env
+             * @param {object} vars
+             * @param {string[]} events
+             * @param {string} schedule
+             * @param {number} timeout
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            create: function(name, execute, env, vars = {}, events = [], schedule = '', timeout = 15) {
+                if(name === undefined) {
+                    throw new Error('Missing required parameter: "name"');
+                }
+                
+                if(execute === undefined) {
+                    throw new Error('Missing required parameter: "execute"');
+                }
+                
+                if(env === undefined) {
+                    throw new Error('Missing required parameter: "env"');
+                }
+                
+                let path = '/functions';
+
+                let payload = {};
+
+                if(name) {
+                    payload['name'] = name;
+                }
+
+                if(execute) {
+                    payload['execute'] = execute;
+                }
+
+                if(env) {
+                    payload['env'] = env;
+                }
+
+                if(vars) {
+                    payload['vars'] = vars;
+                }
+
+                if(events) {
+                    payload['events'] = events;
+                }
+
+                if(schedule) {
+                    payload['schedule'] = schedule;
+                }
+
+                if(timeout) {
+                    payload['timeout'] = timeout;
+                }
+
+                return http
+                    .post(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
+             * Get Function
+             *
+             * Get a function by its unique ID.
+             *
+             * @param {string} functionId
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            get: function(functionId) {
+                if(functionId === undefined) {
+                    throw new Error('Missing required parameter: "functionId"');
+                }
+                
+                let path = '/functions/{functionId}'.replace(new RegExp('{functionId}', 'g'), functionId);
+
+                let payload = {};
+
+                return http
+                    .get(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
+             * Update Function
+             *
+             * Update function by its unique ID.
+             *
+             * @param {string} functionId
+             * @param {string} name
+             * @param {string[]} execute
+             * @param {object} vars
+             * @param {string[]} events
+             * @param {string} schedule
+             * @param {number} timeout
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            update: function(functionId, name, execute, vars = {}, events = [], schedule = '', timeout = 15) {
+                if(functionId === undefined) {
+                    throw new Error('Missing required parameter: "functionId"');
+                }
+                
+                if(name === undefined) {
+                    throw new Error('Missing required parameter: "name"');
+                }
+                
+                if(execute === undefined) {
+                    throw new Error('Missing required parameter: "execute"');
+                }
+                
+                let path = '/functions/{functionId}'.replace(new RegExp('{functionId}', 'g'), functionId);
+
+                let payload = {};
+
+                if(name) {
+                    payload['name'] = name;
+                }
+
+                if(execute) {
+                    payload['execute'] = execute;
+                }
+
+                if(vars) {
+                    payload['vars'] = vars;
+                }
+
+                if(events) {
+                    payload['events'] = events;
+                }
+
+                if(schedule) {
+                    payload['schedule'] = schedule;
+                }
+
+                if(timeout) {
+                    payload['timeout'] = timeout;
+                }
+
+                return http
+                    .put(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
+             * Delete Function
+             *
+             * Delete a function by its unique ID.
+             *
+             * @param {string} functionId
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            delete: function(functionId) {
+                if(functionId === undefined) {
+                    throw new Error('Missing required parameter: "functionId"');
+                }
+                
+                let path = '/functions/{functionId}'.replace(new RegExp('{functionId}', 'g'), functionId);
+
+                let payload = {};
+
+                return http
+                    .delete(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
+             * List Executions
+             *
+             * Get a list of all the current user function execution logs. You can use the
+             * query params to filter your results. On admin mode, this endpoint will
+             * return a list of all of the project's teams. [Learn more about different
+             * API modes](/docs/admin).
+             *
+             * @param {string} functionId
+             * @param {string} search
+             * @param {number} limit
+             * @param {number} offset
+             * @param {string} orderType
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            listExecutions: function(functionId, search = '', limit = 25, offset = 0, orderType = 'ASC') {
+                if(functionId === undefined) {
+                    throw new Error('Missing required parameter: "functionId"');
+                }
+                
+                let path = '/functions/{functionId}/executions'.replace(new RegExp('{functionId}', 'g'), functionId);
+
+                let payload = {};
+
+                if(search) {
+                    payload['search'] = search;
+                }
+
+                if(limit) {
+                    payload['limit'] = limit;
+                }
+
+                if(offset) {
+                    payload['offset'] = offset;
+                }
+
+                if(orderType) {
+                    payload['orderType'] = orderType;
+                }
+
+                return http
+                    .get(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
+             * Create Execution
+             *
+             * Trigger a function execution. The returned object will return you the
+             * current execution status. You can ping the `Get Execution` endpoint to get
+             * updates on the current execution status. Once this endpoint is called, your
+             * function execution process will start asynchronously.
+             *
+             * @param {string} functionId
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            createExecution: function(functionId) {
+                if(functionId === undefined) {
+                    throw new Error('Missing required parameter: "functionId"');
+                }
+                
+                let path = '/functions/{functionId}/executions'.replace(new RegExp('{functionId}', 'g'), functionId);
+
+                let payload = {};
+
+                return http
+                    .post(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
+             * Get Execution
+             *
+             * Get a function execution log by its unique ID.
+             *
+             * @param {string} functionId
+             * @param {string} executionId
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            getExecution: function(functionId, executionId) {
+                if(functionId === undefined) {
+                    throw new Error('Missing required parameter: "functionId"');
+                }
+                
+                if(executionId === undefined) {
+                    throw new Error('Missing required parameter: "executionId"');
+                }
+                
+                let path = '/functions/{functionId}/executions/{executionId}'.replace(new RegExp('{functionId}', 'g'), functionId).replace(new RegExp('{executionId}', 'g'), executionId);
+
+                let payload = {};
+
+                return http
+                    .get(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
+             * Update Function Tag
+             *
+             * Update the function code tag ID using the unique function ID. Use this
+             * endpoint to switch the code tag that should be executed by the execution
+             * endpoint.
+             *
+             * @param {string} functionId
+             * @param {string} tag
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            updateTag: function(functionId, tag) {
+                if(functionId === undefined) {
+                    throw new Error('Missing required parameter: "functionId"');
+                }
+                
+                if(tag === undefined) {
+                    throw new Error('Missing required parameter: "tag"');
+                }
+                
+                let path = '/functions/{functionId}/tag'.replace(new RegExp('{functionId}', 'g'), functionId);
+
+                let payload = {};
+
+                if(tag) {
+                    payload['tag'] = tag;
+                }
+
+                return http
+                    .patch(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
+             * List Tags
+             *
+             * Get a list of all the project's code tags. You can use the query params to
+             * filter your results.
+             *
+             * @param {string} functionId
+             * @param {string} search
+             * @param {number} limit
+             * @param {number} offset
+             * @param {string} orderType
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            listTags: function(functionId, search = '', limit = 25, offset = 0, orderType = 'ASC') {
+                if(functionId === undefined) {
+                    throw new Error('Missing required parameter: "functionId"');
+                }
+                
+                let path = '/functions/{functionId}/tags'.replace(new RegExp('{functionId}', 'g'), functionId);
+
+                let payload = {};
+
+                if(search) {
+                    payload['search'] = search;
+                }
+
+                if(limit) {
+                    payload['limit'] = limit;
+                }
+
+                if(offset) {
+                    payload['offset'] = offset;
+                }
+
+                if(orderType) {
+                    payload['orderType'] = orderType;
+                }
+
+                return http
+                    .get(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
+             * Create Tag
+             *
+             * Create a new function code tag. Use this endpoint to upload a new version
+             * of your code function. To execute your newly uploaded code, you'll need to
+             * update the function's tag to use your new tag UID.
+             * 
+             * This endpoint accepts a tar.gz file compressed with your code. Make sure to
+             * include any dependencies your code has within the compressed file. You can
+             * learn more about code packaging in the [Appwrite Cloud Functions
+             * tutorial](/docs/functions).
+             * 
+             * Use the "command" param to set the entry point used to execute your code.
+             *
+             * @param {string} functionId
+             * @param {string} command
+             * @param {File} code
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            createTag: function(functionId, command, code) {
+                if(functionId === undefined) {
+                    throw new Error('Missing required parameter: "functionId"');
+                }
+                
+                if(command === undefined) {
+                    throw new Error('Missing required parameter: "command"');
+                }
+                
+                if(code === undefined) {
+                    throw new Error('Missing required parameter: "code"');
+                }
+                
+                let path = '/functions/{functionId}/tags'.replace(new RegExp('{functionId}', 'g'), functionId);
+
+                let payload = {};
+
+                if(command) {
+                    payload['command'] = command;
+                }
+
+                if(code) {
+                    payload['code'] = code;
+                }
+
+                return http
+                    .post(path, {
+                        'content-type': 'multipart/form-data',
+                    }, payload);
+            },
+
+            /**
+             * Get Tag
+             *
+             * Get a code tag by its unique ID.
+             *
+             * @param {string} functionId
+             * @param {string} tagId
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            getTag: function(functionId, tagId) {
+                if(functionId === undefined) {
+                    throw new Error('Missing required parameter: "functionId"');
+                }
+                
+                if(tagId === undefined) {
+                    throw new Error('Missing required parameter: "tagId"');
+                }
+                
+                let path = '/functions/{functionId}/tags/{tagId}'.replace(new RegExp('{functionId}', 'g'), functionId).replace(new RegExp('{tagId}', 'g'), tagId);
+
+                let payload = {};
+
+                return http
+                    .get(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
+             * Delete Tag
+             *
+             * Delete a code tag by its unique ID.
+             *
+             * @param {string} functionId
+             * @param {string} tagId
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            deleteTag: function(functionId, tagId) {
+                if(functionId === undefined) {
+                    throw new Error('Missing required parameter: "functionId"');
+                }
+                
+                if(tagId === undefined) {
+                    throw new Error('Missing required parameter: "tagId"');
+                }
+                
+                let path = '/functions/{functionId}/tags/{tagId}'.replace(new RegExp('{functionId}', 'g'), functionId).replace(new RegExp('{tagId}', 'g'), tagId);
+
+                let payload = {};
+
+                return http
+                    .delete(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
+             * Get Function Usage
+             *
+             *
+             * @param {string} functionId
+             * @param {string} range
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            getUsage: function(functionId, range = '30d') {
+                if(functionId === undefined) {
+                    throw new Error('Missing required parameter: "functionId"');
+                }
+                
+                let path = '/functions/{functionId}/usage'.replace(new RegExp('{functionId}', 'g'), functionId);
+
+                let payload = {};
+
+                if(range) {
+                    payload['range'] = range;
+                }
+
+                return http
+                    .get(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            }
+        };
+
+        let health = {
+
+            /**
+             * Get HTTP
+             *
+             * Check the Appwrite HTTP server is up and responsive.
+             *
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            get: function() {
+                let path = '/health';
+
+                let payload = {};
+
+                return http
+                    .get(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
+             * Get Anti virus
+             *
+             * Check the Appwrite Anti Virus server is up and connection is successful.
+             *
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            getAntiVirus: function() {
+                let path = '/health/anti-virus';
+
+                let payload = {};
+
+                return http
+                    .get(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
+             * Get Cache
+             *
+             * Check the Appwrite in-memory cache server is up and connection is
+             * successful.
+             *
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            getCache: function() {
+                let path = '/health/cache';
+
+                let payload = {};
+
+                return http
+                    .get(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
+             * Get DB
+             *
+             * Check the Appwrite database server is up and connection is successful.
+             *
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            getDB: function() {
+                let path = '/health/db';
+
+                let payload = {};
+
+                return http
+                    .get(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
+             * Get Certificate Queue
+             *
+             * Get the number of certificates that are waiting to be issued against
+             * [Letsencrypt](https://letsencrypt.org/) in the Appwrite internal queue
+             * server.
+             *
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            getQueueCertificates: function() {
+                let path = '/health/queue/certificates';
+
+                let payload = {};
+
+                return http
+                    .get(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
+             * Get Functions Queue
+             *
+             *
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            getQueueFunctions: function() {
+                let path = '/health/queue/functions';
+
+                let payload = {};
+
+                return http
+                    .get(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
+             * Get Logs Queue
+             *
+             * Get the number of logs that are waiting to be processed in the Appwrite
+             * internal queue server.
+             *
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            getQueueLogs: function() {
+                let path = '/health/queue/logs';
+
+                let payload = {};
+
+                return http
+                    .get(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
+             * Get Tasks Queue
+             *
+             * Get the number of tasks that are waiting to be processed in the Appwrite
+             * internal queue server.
+             *
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            getQueueTasks: function() {
+                let path = '/health/queue/tasks';
+
+                let payload = {};
+
+                return http
+                    .get(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
+             * Get Usage Queue
+             *
+             * Get the number of usage stats that are waiting to be processed in the
+             * Appwrite internal queue server.
+             *
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            getQueueUsage: function() {
+                let path = '/health/queue/usage';
+
+                let payload = {};
+
+                return http
+                    .get(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
+             * Get Webhooks Queue
+             *
+             * Get the number of webhooks that are waiting to be processed in the Appwrite
+             * internal queue server.
+             *
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            getQueueWebhooks: function() {
+                let path = '/health/queue/webhooks';
+
+                let payload = {};
+
+                return http
+                    .get(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
+             * Get Local Storage
+             *
+             * Check the Appwrite local storage device is up and connection is successful.
+             *
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            getStorageLocal: function() {
+                let path = '/health/storage/local';
+
+                let payload = {};
+
+                return http
+                    .get(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
+             * Get Time
+             *
+             * Check the Appwrite server time is synced with Google remote NTP server. We
+             * use this technology to smoothly handle leap seconds with no disruptive
+             * events. The [Network Time
+             * Protocol](https://en.wikipedia.org/wiki/Network_Time_Protocol) (NTP) is
+             * used by hundreds of millions of computers and devices to synchronize their
+             * clocks over the Internet. If your computer sets its own clock, it likely
+             * uses NTP.
+             *
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            getTime: function() {
+                let path = '/health/time';
+
+                let payload = {};
+
+                return http
+                    .get(path, {
                         'content-type': 'application/json',
                     }, payload);
             }
@@ -1640,7 +2610,7 @@
             },
 
             /**
-             * List Countries
+             * List Continents
              *
              * List of all continents. You can use the locale header to get the data in a
              * supported language.
@@ -1722,15 +2692,35 @@
             /**
              * List Currencies
              *
-             * List of all currencies, including currency symol, name, plural, and decimal
-             * digits for all major and minor currencies. You can use the locale header to
-             * get the data in a supported language.
+             * List of all currencies, including currency symbol, name, plural, and
+             * decimal digits for all major and minor currencies. You can use the locale
+             * header to get the data in a supported language.
              *
              * @throws {Error}
              * @return {Promise}             
              */
             getCurrencies: function() {
                 let path = '/locale/currencies';
+
+                let payload = {};
+
+                return http
+                    .get(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
+             * List Languages
+             *
+             * List of all languages classified by ISO 639-1 including 2-letter code, name
+             * in English, and name in the respective language.
+             *
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            getLanguages: function() {
+                let path = '/locale/languages';
 
                 let payload = {};
 
@@ -1747,13 +2737,33 @@
              * List Projects
              *
              *
+             * @param {string} search
+             * @param {number} limit
+             * @param {number} offset
+             * @param {string} orderType
              * @throws {Error}
              * @return {Promise}             
              */
-            list: function() {
+            list: function(search = '', limit = 25, offset = 0, orderType = 'ASC') {
                 let path = '/projects';
 
                 let payload = {};
+
+                if(search) {
+                    payload['search'] = search;
+                }
+
+                if(limit) {
+                    payload['limit'] = limit;
+                }
+
+                if(offset) {
+                    payload['offset'] = offset;
+                }
+
+                if(orderType) {
+                    payload['orderType'] = orderType;
+                }
 
                 return http
                     .get(path, {
@@ -2142,7 +3152,7 @@
              *
              * @param {string} projectId
              * @param {string} name
-             * @param {array} scopes
+             * @param {string[]} scopes
              * @throws {Error}
              * @return {Promise}             
              */
@@ -2212,7 +3222,7 @@
              * @param {string} projectId
              * @param {string} keyId
              * @param {string} name
-             * @param {array} scopes
+             * @param {string[]} scopes
              * @throws {Error}
              * @return {Promise}             
              */
@@ -2539,10 +3549,10 @@
              * @param {string} name
              * @param {string} status
              * @param {string} schedule
-             * @param {number} security
+             * @param {boolean} security
              * @param {string} httpMethod
              * @param {string} httpUrl
-             * @param {array} httpHeaders
+             * @param {string[]} httpHeaders
              * @param {string} httpUser
              * @param {string} httpPass
              * @throws {Error}
@@ -2660,10 +3670,10 @@
              * @param {string} name
              * @param {string} status
              * @param {string} schedule
-             * @param {number} security
+             * @param {boolean} security
              * @param {string} httpMethod
              * @param {string} httpUrl
-             * @param {array} httpHeaders
+             * @param {string[]} httpHeaders
              * @param {string} httpUser
              * @param {string} httpPass
              * @throws {Error}
@@ -2781,10 +3791,11 @@
              *
              *
              * @param {string} projectId
+             * @param {string} range
              * @throws {Error}
              * @return {Promise}             
              */
-            getUsage: function(projectId) {
+            getUsage: function(projectId, range = '30d') {
                 if(projectId === undefined) {
                     throw new Error('Missing required parameter: "projectId"');
                 }
@@ -2792,6 +3803,10 @@
                 let path = '/projects/{projectId}/usage'.replace(new RegExp('{projectId}', 'g'), projectId);
 
                 let payload = {};
+
+                if(range) {
+                    payload['range'] = range;
+                }
 
                 return http
                     .get(path, {
@@ -2828,9 +3843,9 @@
              *
              * @param {string} projectId
              * @param {string} name
-             * @param {array} events
+             * @param {string[]} events
              * @param {string} url
-             * @param {number} security
+             * @param {boolean} security
              * @param {string} httpUser
              * @param {string} httpPass
              * @throws {Error}
@@ -2926,9 +3941,9 @@
              * @param {string} projectId
              * @param {string} webhookId
              * @param {string} name
-             * @param {array} events
+             * @param {string[]} events
              * @param {string} url
-             * @param {number} security
+             * @param {boolean} security
              * @param {string} httpUser
              * @param {string} httpPass
              * @throws {Error}
@@ -3029,7 +4044,7 @@
              *
              * Get a list of all the user files. You can use the query params to filter
              * your results. On admin mode, this endpoint will return a list of all of the
-             * project files. [Learn more about different API modes](/docs/admin).
+             * project's files. [Learn more about different API modes](/docs/admin).
              *
              * @param {string} search
              * @param {number} limit
@@ -3073,8 +4088,8 @@
              * read and write arguments.
              *
              * @param {File} file
-             * @param {array} read
-             * @param {array} write
+             * @param {string[]} read
+             * @param {string[]} write
              * @throws {Error}
              * @return {Promise}             
              */
@@ -3116,7 +4131,7 @@
             /**
              * Get File
              *
-             * Get file by its unique ID. This endpoint response returns a JSON object
+             * Get a file by its unique ID. This endpoint response returns a JSON object
              * with the file metadata.
              *
              * @param {string} fileId
@@ -3141,12 +4156,12 @@
             /**
              * Update File
              *
-             * Update file by its unique ID. Only users with write permissions have access
-             * to update this resource.
+             * Update a file by its unique ID. Only users with write permissions have
+             * access to update this resource.
              *
              * @param {string} fileId
-             * @param {array} read
-             * @param {array} write
+             * @param {string[]} read
+             * @param {string[]} write
              * @throws {Error}
              * @return {Promise}             
              */
@@ -3209,7 +4224,7 @@
             /**
              * Get File for Download
              *
-             * Get file content by its unique ID. The endpoint response return with a
+             * Get a file content by its unique ID. The endpoint response return with a
              * 'Content-Disposition: attachment' header that tells the browser to start
              * downloading the file to user downloads directory.
              *
@@ -3230,8 +4245,23 @@
 
                 payload['key'] = config.key;
 
-                let query = Object.keys(payload).map(key => key + '=' + encodeURIComponent(payload[key])).join('&');
 
+                let query = [];
+
+                for (let p in payload) {
+                    if(Array.isArray(payload[p])) {
+                        for (let index = 0; index < payload[p].length; index++) {
+                            let param = payload[p][index];
+                            query.push(encodeURIComponent(p + '[]') + "=" + encodeURIComponent(param));
+                        }
+                    }
+                    else {
+                        query.push(encodeURIComponent(p) + "=" + encodeURIComponent(payload[p]));
+                    }
+                }
+
+                query =  query.join("&");
+                
                 return config.endpoint + path + ((query) ? '?' + query : '');
             },
 
@@ -3285,23 +4315,38 @@
 
                 payload['key'] = config.key;
 
-                let query = Object.keys(payload).map(key => key + '=' + encodeURIComponent(payload[key])).join('&');
 
+                let query = [];
+
+                for (let p in payload) {
+                    if(Array.isArray(payload[p])) {
+                        for (let index = 0; index < payload[p].length; index++) {
+                            let param = payload[p][index];
+                            query.push(encodeURIComponent(p + '[]') + "=" + encodeURIComponent(param));
+                        }
+                    }
+                    else {
+                        query.push(encodeURIComponent(p) + "=" + encodeURIComponent(payload[p]));
+                    }
+                }
+
+                query =  query.join("&");
+                
                 return config.endpoint + path + ((query) ? '?' + query : '');
             },
 
             /**
              * Get File for View
              *
-             * Get file content by its unique ID. This endpoint is similar to the download
-             * method but returns with no  'Content-Disposition: attachment' header.
+             * Get a file content by its unique ID. This endpoint is similar to the
+             * download method but returns with no  'Content-Disposition: attachment'
+             * header.
              *
              * @param {string} fileId
-             * @param {string} as
              * @throws {Error}
              * @return {string}             
              */
-            getFileView: function(fileId, as = '') {
+            getFileView: function(fileId) {
                 if(fileId === undefined) {
                     throw new Error('Missing required parameter: "fileId"');
                 }
@@ -3310,16 +4355,27 @@
 
                 let payload = {};
 
-                if(as) {
-                    payload['as'] = as;
-                }
-
                 payload['project'] = config.project;
 
                 payload['key'] = config.key;
 
-                let query = Object.keys(payload).map(key => key + '=' + encodeURIComponent(payload[key])).join('&');
 
+                let query = [];
+
+                for (let p in payload) {
+                    if(Array.isArray(payload[p])) {
+                        for (let index = 0; index < payload[p].length; index++) {
+                            let param = payload[p][index];
+                            query.push(encodeURIComponent(p + '[]') + "=" + encodeURIComponent(param));
+                        }
+                    }
+                    else {
+                        query.push(encodeURIComponent(p) + "=" + encodeURIComponent(payload[p]));
+                    }
+                }
+
+                query =  query.join("&");
+                
                 return config.endpoint + path + ((query) ? '?' + query : '');
             }
         };
@@ -3331,7 +4387,8 @@
              *
              * Get a list of all the current user teams. You can use the query params to
              * filter your results. On admin mode, this endpoint will return a list of all
-             * of the project teams. [Learn more about different API modes](/docs/admin).
+             * of the project's teams. [Learn more about different API
+             * modes](/docs/admin).
              *
              * @param {string} search
              * @param {number} limit
@@ -3376,7 +4433,7 @@
              * project.
              *
              * @param {string} name
-             * @param {array} roles
+             * @param {string[]} roles
              * @throws {Error}
              * @return {Promise}             
              */
@@ -3406,7 +4463,7 @@
             /**
              * Get Team
              *
-             * Get team by its unique ID. All team members have read access for this
+             * Get a team by its unique ID. All team members have read access for this
              * resource.
              *
              * @param {string} teamId
@@ -3431,7 +4488,7 @@
             /**
              * Update Team
              *
-             * Update team by its unique ID. Only team owners have write access for this
+             * Update a team by its unique ID. Only team owners have write access for this
              * resource.
              *
              * @param {string} teamId
@@ -3465,7 +4522,7 @@
             /**
              * Delete Team
              *
-             * Delete team by its unique ID. Only team owners have write access for this
+             * Delete a team by its unique ID. Only team owners have write access for this
              * resource.
              *
              * @param {string} teamId
@@ -3490,14 +4547,18 @@
             /**
              * Get Team Memberships
              *
-             * Get team members by the team unique ID. All team members have read access
+             * Get a team members by the team unique ID. All team members have read access
              * for this list of resources.
              *
              * @param {string} teamId
+             * @param {string} search
+             * @param {number} limit
+             * @param {number} offset
+             * @param {string} orderType
              * @throws {Error}
              * @return {Promise}             
              */
-            getMemberships: function(teamId) {
+            getMemberships: function(teamId, search = '', limit = 25, offset = 0, orderType = 'ASC') {
                 if(teamId === undefined) {
                     throw new Error('Missing required parameter: "teamId"');
                 }
@@ -3505,6 +4566,22 @@
                 let path = '/teams/{teamId}/memberships'.replace(new RegExp('{teamId}', 'g'), teamId);
 
                 let payload = {};
+
+                if(search) {
+                    payload['search'] = search;
+                }
+
+                if(limit) {
+                    payload['limit'] = limit;
+                }
+
+                if(offset) {
+                    payload['offset'] = offset;
+                }
+
+                if(orderType) {
+                    payload['orderType'] = orderType;
+                }
 
                 return http
                     .get(path, {
@@ -3521,8 +4598,8 @@
              * 
              * Use the 'URL' parameter to redirect the user from the invitation email back
              * to your app. When the user is redirected, use the [Update Team Membership
-             * Status](/docs/teams#updateMembershipStatus) endpoint to allow the user to
-             * accept the invitation to the team.
+             * Status](/docs/client/teams#updateMembershipStatus) endpoint to allow the
+             * user to accept the invitation to the team.
              * 
              * Please note that in order to avoid a [Redirect
              * Attacks](https://github.com/OWASP/CheatSheetSeries/blob/master/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.md)
@@ -3531,7 +4608,7 @@
              *
              * @param {string} teamId
              * @param {string} email
-             * @param {array} roles
+             * @param {string[]} roles
              * @param {string} url
              * @param {string} name
              * @throws {Error}
@@ -3585,7 +4662,7 @@
              *
              * This endpoint allows a user to leave a team or for a team owner to delete
              * the membership of any other team member. You can also use this endpoint to
-             * delete a user membership even if he didn't accept it.
+             * delete a user membership even if it is not accepted.
              *
              * @param {string} teamId
              * @param {string} inviteId
@@ -3615,8 +4692,8 @@
              * Update Team Membership Status
              *
              * Use this endpoint to allow a user to accept an invitation to join a team
-             * after he is being redirected back to your app from the invitation email he
-             * was sent.
+             * after being redirected back to your app from the invitation email recieved
+             * by the user.
              *
              * @param {string} teamId
              * @param {string} inviteId
@@ -3666,8 +4743,8 @@
             /**
              * List Users
              *
-             * Get a list of all the project users. You can use the query params to filter
-             * your results.
+             * Get a list of all the project's users. You can use the query params to
+             * filter your results.
              *
              * @param {string} search
              * @param {number} limit
@@ -3748,7 +4825,7 @@
             /**
              * Get User
              *
-             * Get user by its unique ID.
+             * Get a user by its unique ID.
              *
              * @param {string} userId
              * @throws {Error}
@@ -3770,9 +4847,33 @@
             },
 
             /**
+             * Delete User
+             *
+             * Delete a user by its unique ID.
+             *
+             * @param {string} userId
+             * @throws {Error}
+             * @return {Promise}             
+             */
+            deleteUser: function(userId) {
+                if(userId === undefined) {
+                    throw new Error('Missing required parameter: "userId"');
+                }
+                
+                let path = '/users/{userId}'.replace(new RegExp('{userId}', 'g'), userId);
+
+                let payload = {};
+
+                return http
+                    .delete(path, {
+                        'content-type': 'application/json',
+                    }, payload);
+            },
+
+            /**
              * Get User Logs
              *
-             * Get user activity logs list by its unique ID.
+             * Get a user activity logs list by its unique ID.
              *
              * @param {string} userId
              * @throws {Error}
@@ -3796,7 +4897,7 @@
             /**
              * Get User Preferences
              *
-             * Get user preferences by its unique ID.
+             * Get the user preferences by its unique ID.
              *
              * @param {string} userId
              * @throws {Error}
@@ -3820,8 +4921,8 @@
             /**
              * Update User Preferences
              *
-             * Update user preferences by its unique ID. You can pass only the specific
-             * settings you wish to update.
+             * Update the user preferences by its unique ID. You can pass only the
+             * specific settings you wish to update.
              *
              * @param {string} userId
              * @param {object} prefs
@@ -3854,7 +4955,7 @@
             /**
              * Get User Sessions
              *
-             * Get user sessions list by its unique ID.
+             * Get the user sessions list by its unique ID.
              *
              * @param {string} userId
              * @throws {Error}
@@ -3878,7 +4979,7 @@
             /**
              * Delete User Sessions
              *
-             * Delete all user sessions by its unique ID.
+             * Delete all user's sessions by using the user's unique ID.
              *
              * @param {string} userId
              * @throws {Error}
@@ -3902,7 +5003,7 @@
             /**
              * Delete User Session
              *
-             * Delete user sessions by its unique ID.
+             * Delete a user sessions by its unique ID.
              *
              * @param {string} userId
              * @param {string} sessionId
@@ -3918,13 +5019,9 @@
                     throw new Error('Missing required parameter: "sessionId"');
                 }
                 
-                let path = '/users/{userId}/sessions/:session'.replace(new RegExp('{userId}', 'g'), userId);
+                let path = '/users/{userId}/sessions/{sessionId}'.replace(new RegExp('{userId}', 'g'), userId).replace(new RegExp('{sessionId}', 'g'), sessionId);
 
                 let payload = {};
-
-                if(sessionId) {
-                    payload['sessionId'] = sessionId;
-                }
 
                 return http
                     .delete(path, {
@@ -3935,7 +5032,7 @@
             /**
              * Update User Status
              *
-             * Update user status by its unique ID.
+             * Update the user status by its unique ID.
              *
              * @param {string} userId
              * @param {string} status
@@ -3975,6 +5072,8 @@
             account: account,
             avatars: avatars,
             database: database,
+            functions: functions,
+            health: health,
             locale: locale,
             projects: projects,
             storage: storage,

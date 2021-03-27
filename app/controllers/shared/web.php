@@ -1,50 +1,56 @@
 <?php
 
-use Utopia\View;
+use Utopia\App;
 use Utopia\Config\Config;
-use Utopia\Locale\Locale;
 
-Locale::$exceptions = false;
+App::init(function ($utopia, $request, $response, $layout) {
+    /** @var Utopia\App $utopia */
+    /** @var Utopia\Swoole\Request $request */
+    /** @var Appwrite\Utopia\Response $response */
+    /** @var Utopia\View $layout */
 
-$roles = [
-    ['type' => 'owner', 'label' => 'Owner'],
-    ['type' => 'developer', 'label' => 'Developer'],
-    ['type' => 'admin', 'label' => 'Admin'],
-];
+    /* AJAX check  */
+    if (!empty($request->getQuery('version', ''))) {
+        $layout->setPath(__DIR__ . '/../../views/layouts/empty.phtml');
+    }
 
-$layout = new View(__DIR__.'/../../views/layouts/default.phtml');
+    $port = $request->getPort();
+    $protocol = $request->getProtocol();
+    $domain = $request->getHostname();
 
-/* AJAX check  */
-if (!empty($request->getQuery('version', ''))) {
-    $layout->setPath(__DIR__.'/../../views/layouts/empty.phtml');
-}
+    $layout
+        ->setParam('title', APP_NAME)
+        ->setParam('protocol', $protocol)
+        ->setParam('domain', $domain)
+        ->setParam('endpoint', $protocol . '://' . $domain . ($port != 80 && $port != 443 ? ':' . $port : ''))
+        ->setParam('home', App::getEnv('_APP_HOME'))
+        ->setParam('setup', App::getEnv('_APP_SETUP'))
+        ->setParam('class', 'unknown')
+        ->setParam('icon', '/images/favicon.png')
+        ->setParam('roles', [
+            ['type' => 'owner', 'label' => 'Owner'],
+            ['type' => 'developer', 'label' => 'Developer'],
+            ['type' => 'admin', 'label' => 'Admin'],
+        ])
+        ->setParam('environments', Config::getParam('environments'))
+        ->setParam('mode', App::getMode())
+    ;
 
-$layout
-    ->setParam('title', APP_NAME)
-    ->setParam('protocol', Config::getParam('protocol'))
-    ->setParam('domain', $domain)
-    ->setParam('home', $request->getServer('_APP_HOME'))
-    ->setParam('setup', $request->getServer('_APP_SETUP'))
-    ->setParam('class', 'unknown')
-    ->setParam('icon', '/images/favicon.png')
-    ->setParam('roles', $roles)
-    ->setParam('env', $utopia->getEnv())
-;
-
-$utopia->shutdown(function () use ($utopia, $response, $request, $layout) {
     $time = (60 * 60 * 24 * 45); // 45 days cache
-    $isDev = (\Utopia\App::ENV_TYPE_DEVELOPMENT == Config::getParam('env'));
 
     $response
-        ->addHeader('Cache-Control', 'public, max-age='.$time)
-        ->addHeader('Expires', date('D, d M Y H:i:s', time() + $time).' GMT') // 45 days cache
-        ->addHeader('X-UA-Compatible', 'IE=Edge'); // Deny IE browsers from going into quirks mode
+        ->addHeader('Cache-Control', 'public, max-age=' . $time)
+        ->addHeader('Expires', \date('D, d M Y H:i:s', \time() + $time) . ' GMT') // 45 days cache
+        ->addHeader('X-Frame-Options', 'SAMEORIGIN') // Avoid console and homepage from showing in iframes
+        ->addHeader('X-XSS-Protection', '1; mode=block; report=/v1/xss?url=' . \urlencode($request->getURI()))
+        ->addHeader('X-UA-Compatible', 'IE=Edge') // Deny IE browsers from going into quirks mode
+    ;
 
     $route = $utopia->match($request);
     $scope = $route->getLabel('scope', '');
     $layout
-        ->setParam('version', Config::getParam('version'))
-        ->setParam('isDev', $isDev)
+        ->setParam('version', App::getEnv('_APP_VERSION', 'UNKNOWN'))
+        ->setParam('isDev', App::isDevelopment())
         ->setParam('class', $scope)
     ;
-});
+}, ['utopia', 'request', 'response', 'layout'], 'web');

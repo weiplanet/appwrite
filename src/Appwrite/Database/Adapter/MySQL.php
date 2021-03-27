@@ -29,20 +29,6 @@ class MySQL extends Adapter
     protected $register;
 
     /**
-     * Saved nodes.
-     *
-     * @var array
-     */
-    protected $nodes = [];
-
-    /**
-     * Count documents get usage.
-     *
-     * @var int
-     */
-    protected $count = 0;
-
-    /**
      * Last modified.
      *
      * Read node with most recent changes
@@ -79,8 +65,6 @@ class MySQL extends Adapter
      */
     public function getDocument($id)
     {
-        ++$this->count;
-
         // Get fields abstraction
         $st = $this->getPDO()->prepare('SELECT * FROM `'.$this->getNamespace().'.database.documents` a
             WHERE a.uid = :uid AND a.status = 0
@@ -113,11 +97,11 @@ class MySQL extends Adapter
         $output = [
             '$id' => null,
             '$collection' => null,
-            '$permissions' => (!empty($document['permissions'])) ? json_decode($document['permissions'], true) : [],
+            '$permissions' => (!empty($document['permissions'])) ? \json_decode($document['permissions'], true) : [],
         ];
 
         foreach ($properties as &$property) {
-            settype($property['value'], $property['primitive']);
+            \settype($property['value'], $property['primitive']);
 
             if ($property['array']) {
                 $output[$property['key']][] = $property['value'];
@@ -154,9 +138,10 @@ class MySQL extends Adapter
     public function createDocument(array $data = [], array $unique = [])
     {
         $order = 0;
-        $data = array_merge(['$id' => null, '$permissions' => []], $data); // Merge data with default params
-        $signature = md5(json_encode($data, true));
-        $revision = uniqid('', true);
+        $data = \array_merge(['$id' => null, '$permissions' => []], $data); // Merge data with default params
+        $signature = \md5(\json_encode($data));
+        $revision = \uniqid('', true);
+        $data['$id'] = (empty($data['$id'])) ? null : $data['$id'];
 
         /*
          * When updating node, check if there are any changes to update
@@ -172,24 +157,28 @@ class MySQL extends Adapter
 
             $st->execute();
 
-            $oldSignature = $st->fetch()['signature'];
+            $result = $st->fetch();
 
-            if ($signature === $oldSignature) {
-                return $data;
+            if ($result && isset($result['signature'])) {
+                $oldSignature = $result['signature'];
+
+                if ($signature === $oldSignature) {
+                    return $data;
+                }
             }
         }
 
         /**
          * Check Unique Keys
          */
-        foreach($unique as $key => $value) {
+        foreach ($unique as $key => $value) {
             $st = $this->getPDO()->prepare('INSERT INTO `'.$this->getNamespace().'.database.unique`
                 SET `key` = :key;
             ');
             
-            $st->bindValue(':key', md5($data['$collection'].':'.$key.'='.$value), PDO::PARAM_STR);
+            $st->bindValue(':key', \md5($data['$collection'].':'.$key.'='.$value), PDO::PARAM_STR);
 
-            if(!$st->execute()) {
+            if (!$st->execute()) {
                 throw new Duplicate('Duplicated Property: '.$key.'='.$value);
             }
         }
@@ -208,9 +197,9 @@ class MySQL extends Adapter
         $st1->bindValue(':uid', $data['$id'], PDO::PARAM_STR);
         $st1->bindValue(':revision', $revision, PDO::PARAM_STR);
         $st1->bindValue(':signature', $signature, PDO::PARAM_STR);
-        $st1->bindValue(':createdAt', date('Y-m-d H:i:s', time()), PDO::PARAM_STR);
-        $st1->bindValue(':updatedAt', date('Y-m-d H:i:s', time()), PDO::PARAM_STR);
-        $st1->bindValue(':permissions', json_encode($data['$permissions']), PDO::PARAM_STR);
+        $st1->bindValue(':createdAt', \date('Y-m-d H:i:s', \time()), PDO::PARAM_STR);
+        $st1->bindValue(':updatedAt', \date('Y-m-d H:i:s', \time()), PDO::PARAM_STR);
+        $st1->bindValue(':permissions', \json_encode($data['$permissions']), PDO::PARAM_STR);
 
         $st1->execute();
 
@@ -235,7 +224,7 @@ class MySQL extends Adapter
 
         foreach ($data as $key => $value) { // Prepare properties data
 
-            if (in_array($key, ['$permissions'])) {
+            if (\in_array($key, ['$permissions'])) {
                 continue;
             }
 
@@ -243,6 +232,10 @@ class MySQL extends Adapter
 
             // Handle array of relations
             if (self::DATA_TYPE_ARRAY === $type) {
+                if (!is_array($value)) { // Property should be of type array, if not = skip
+                    continue;
+                }
+
                 foreach ($value as $i => $child) {
                     if (self::DATA_TYPE_DICTIONARY !== $this->getDataType($child)) { // not dictionary
 
@@ -287,8 +280,8 @@ class MySQL extends Adapter
         }
 
         foreach ($props as $prop) {
-            if (is_array($prop['value'])) {
-                throw new Exception('Value can\'t be an array: '.json_encode($prop['value']));
+            if (\is_array($prop['value'])) {
+                throw new Exception('Value can\'t be an array: '.\json_encode($prop['value']));
             }
             $st2->bindValue(':documentUid', $data['$id'], PDO::PARAM_STR);
             $st2->bindValue(':documentRevision', $revision, PDO::PARAM_STR);
@@ -326,13 +319,13 @@ class MySQL extends Adapter
     /**
      * Delete Document.
      *
-     * @param int $id
+     * @param string $id
      *
      * @return array
      *
      * @throws Exception
      */
-    public function deleteDocument($id)
+    public function deleteDocument(string $id)
     {
         $st1 = $this->getPDO()->prepare('DELETE FROM `'.$this->getNamespace().'.database.documents`
             WHERE uid = :id
@@ -357,6 +350,26 @@ class MySQL extends Adapter
         $st3->bindValue(':id', $id, PDO::PARAM_STR);
 
         $st3->execute();
+
+        return [];
+    }
+
+    /**
+     * Delete Unique Key.
+     *
+     * @param int $key
+     *
+     * @return array
+     *
+     * @throws Exception
+     */
+    public function deleteUniqueKey($key)
+    {
+        $st1 = $this->getPDO()->prepare('DELETE FROM `'.$this->getNamespace().'.database.unique` WHERE `key` = :key');
+
+        $st1->bindValue(':key', $key, PDO::PARAM_STR);
+
+        $st1->execute();
 
         return [];
     }
@@ -446,6 +459,7 @@ class MySQL extends Adapter
             throw new Exception('Empty namespace');
         }
 
+        $unique = 'app_'.$namespace.'.database.unique';
         $documents = 'app_'.$namespace.'.database.documents';
         $properties = 'app_'.$namespace.'.database.properties';
         $relationships = 'app_'.$namespace.'.database.relationships';
@@ -453,6 +467,7 @@ class MySQL extends Adapter
         $abuse = 'app_'.$namespace.'.abuse.abuse';
 
         try {
+            $this->getPDO()->prepare('DROP TABLE `'.$unique.'`;')->execute();
             $this->getPDO()->prepare('DROP TABLE `'.$documents.'`;')->execute();
             $this->getPDO()->prepare('DROP TABLE `'.$properties.'`;')->execute();
             $this->getPDO()->prepare('DROP TABLE `'.$relationships.'`;')->execute();
@@ -476,7 +491,7 @@ class MySQL extends Adapter
      */
     public function getCollection(array $options)
     {
-        $start = microtime(true);
+        $start = \microtime(true);
         $orderCastMap = [
             'int' => 'UNSIGNED',
             'string' => 'CHAR',
@@ -486,14 +501,14 @@ class MySQL extends Adapter
         ];
         $orderTypeMap = ['DESC', 'ASC'];
 
-        $options['orderField'] = (empty($options['orderField'])) ? '$id' : $options['orderField']; // Set default order field
+        $options['orderField'] = (empty($options['orderField'])) ? '' : $options['orderField']; // Set default order field
         $options['orderCast'] = (empty($options['orderCast'])) ? 'string' : $options['orderCast']; // Set default order field
 
-        if (!array_key_exists($options['orderCast'], $orderCastMap)) {
+        if (!\array_key_exists($options['orderCast'], $orderCastMap)) {
             throw new Exception('Invalid order cast');
         }
 
-        if (!in_array($options['orderType'], $orderTypeMap)) {
+        if (!\in_array($options['orderType'], $orderTypeMap)) {
             throw new Exception('Invalid order type');
         }
 
@@ -509,11 +524,11 @@ class MySQL extends Adapter
             $value = $filter['value'];
             $operator = $filter['operator'];
 
-            $path = explode('.', $key);
+            $path = \explode('.', $key);
             $original = $path;
 
-            if (1 < count($path)) {
-                $key = array_pop($path);
+            if (1 < \count($path)) {
+                $key = \array_pop($path);
             } else {
                 $path = [];
             }
@@ -530,7 +545,7 @@ class MySQL extends Adapter
                 //if($path == "''") { // Handle direct attributes queries
                 $where[] = 'JOIN `'.$this->getNamespace().".database.properties` b{$i} ON a.uid IS NOT NULL AND b{$i}.documentUid = a.uid AND (b{$i}.key = {$key} AND b{$i}.value {$operator} {$value})";
             } else { // Handle direct child attributes queries
-                $len = count($original);
+                $len = \count($original);
                 $prev = 'c'.$i;
 
                 foreach ($original as $y => $part) {
@@ -552,34 +567,39 @@ class MySQL extends Adapter
         }
 
         // Sorting
-        $orderPath = explode('.', $options['orderField']);
-        $len = count($orderPath);
-        $orderKey = 'order_b';
-        $part = $this->getPDO()->quote(implode('', $orderPath), PDO::PARAM_STR);
-        $orderSelect = "CASE WHEN {$orderKey}.key = {$part} THEN CAST({$orderKey}.value AS {$orderCastMap[$options['orderCast']]}) END AS sort_ff";
-
-        if (1 === $len) {
-            //if($path == "''") { // Handle direct attributes queries
-            $sorts[] = 'LEFT JOIN `'.$this->getNamespace().".database.properties` order_b ON a.uid IS NOT NULL AND order_b.documentUid = a.uid AND (order_b.key = {$part})";
-        } else { // Handle direct child attributes queries
-            $prev = 'c';
-            $orderKey = 'order_e';
-
-            foreach ($orderPath as $y => $part) {
-                $part = $this->getPDO()->quote($part, PDO::PARAM_STR);
-                $x = $y - 1;
-
-                if (0 === $y) { // First key
-                    $sorts[] = 'JOIN `'.$this->getNamespace().".database.relationships` order_c{$y} ON a.uid IS NOT NULL AND order_c{$y}.start = a.uid AND order_c{$y}.key = {$part}";
-                } elseif ($y == $len - 1) { // Last key
-                    $sorts[] .= 'JOIN `'.$this->getNamespace().".database.properties` order_e ON order_e.documentUid = order_{$prev}{$x}.end AND order_e.key = {$part}";
-                } else {
-                    $sorts[] .= 'JOIN `'.$this->getNamespace().".database.relationships` order_d{$y} ON order_d{$y}.start = order_{$prev}{$x}.end AND order_d{$y}.key = {$part}";
-                    $prev = 'd';
+        if(!empty($options['orderField'])) {
+            $orderPath = \explode('.', $options['orderField']);
+            $len = \count($orderPath);
+            $orderKey = 'order_b';
+            $part = $this->getPDO()->quote(\implode('', $orderPath), PDO::PARAM_STR);
+            $orderSelect = "CASE WHEN {$orderKey}.key = {$part} THEN CAST({$orderKey}.value AS {$orderCastMap[$options['orderCast']]}) END AS sort_ff";
+    
+            if (1 === $len) {
+                //if($path == "''") { // Handle direct attributes queries
+                $sorts[] = 'LEFT JOIN `'.$this->getNamespace().".database.properties` order_b ON a.uid IS NOT NULL AND order_b.documentUid = a.uid AND (order_b.key = {$part})";
+            } else { // Handle direct child attributes queries
+                $prev = 'c';
+                $orderKey = 'order_e';
+    
+                foreach ($orderPath as $y => $part) {
+                    $part = $this->getPDO()->quote($part, PDO::PARAM_STR);
+                    $x = $y - 1;
+    
+                    if (0 === $y) { // First key
+                        $sorts[] = 'JOIN `'.$this->getNamespace().".database.relationships` order_c{$y} ON a.uid IS NOT NULL AND order_c{$y}.start = a.uid AND order_c{$y}.key = {$part}";
+                    } elseif ($y == $len - 1) { // Last key
+                        $sorts[] .= 'JOIN `'.$this->getNamespace().".database.properties` order_e ON order_e.documentUid = order_{$prev}{$x}.end AND order_e.key = {$part}";
+                    } else {
+                        $sorts[] .= 'JOIN `'.$this->getNamespace().".database.relationships` order_d{$y} ON order_d{$y}.start = order_{$prev}{$x}.end AND order_d{$y}.key = {$part}";
+                        $prev = 'd';
+                    }
                 }
-            }
+            }    
         }
-
+        else {
+            $orderSelect = 'a.uid AS sort_ff';
+        }
+        
         /*
          * Workaround for a MySQL bug as reported here:
          * https://bugs.mysql.com/bug.php?id=78485
@@ -601,9 +621,9 @@ class MySQL extends Adapter
         }
 
         $select = 'DISTINCT a.uid';
-        $where = implode("\n", $where);
-        $join = implode("\n", $join);
-        $sorts = implode("\n", $sorts);
+        $where = \implode("\n", $where);
+        $join = \implode("\n", $join);
+        $sorts = \implode("\n", $sorts);
         $range = "LIMIT {$options['offset']}, {$options['limit']}";
         $roles = [];
 
@@ -619,10 +639,10 @@ class MySQL extends Adapter
             FROM `".$this->getNamespace().".database.documents` a {$where}{$join}{$sorts}
             WHERE status = 0
                {$search}
-               AND (".implode('||', $roles).")
+               AND (".\implode('||', $roles).")
             ORDER BY sort_ff {$options['orderType']} %s";
 
-        $st = $this->getPDO()->prepare(sprintf($query, $select, $range));
+        $st = $this->getPDO()->prepare(\sprintf($query, $select, $range));
 
         $st->execute();
 
@@ -633,7 +653,7 @@ class MySQL extends Adapter
             $results['data'][] = $node['uid'];
         }
 
-        $count = $this->getPDO()->prepare(sprintf($query, 'count(DISTINCT a.uid) as sum', ''));
+        $count = $this->getPDO()->prepare(\sprintf($query, 'count(DISTINCT a.uid) as sum', ''));
 
         $count->execute();
 
@@ -642,13 +662,12 @@ class MySQL extends Adapter
         $this->resetDebug();
 
         $this
-            ->setDebug('query', preg_replace('/\s+/', ' ', sprintf($query, $select, $range)))
-            ->setDebug('time', microtime(true) - $start)
-            ->setDebug('filters', count($options['filters']))
-            ->setDebug('joins', substr_count($query, 'JOIN'))
-            ->setDebug('count', count($results['data']))
+            ->setDebug('query', \preg_replace('/\s+/', ' ', \sprintf($query, $select, $range)))
+            ->setDebug('time', \microtime(true) - $start)
+            ->setDebug('filters', \count($options['filters']))
+            ->setDebug('joins', \substr_count($query, 'JOIN'))
+            ->setDebug('count', \count($results['data']))
             ->setDebug('sum', (int) $count['sum'])
-            ->setDebug('documents', $this->count)
         ;
 
         return $results['data'];
@@ -665,9 +684,14 @@ class MySQL extends Adapter
      */
     public function getCount(array $options)
     {
-        $start = microtime(true);
+        $start = \microtime(true);
         $where = [];
         $join = [];
+
+        $options = array_merge([
+            'attribute' => '',
+            'filters' => [],
+        ], $options);
 
         // Filters
         foreach ($options['filters'] as $i => $filter) {
@@ -675,11 +699,11 @@ class MySQL extends Adapter
             $key = $filter['key'];
             $value = $filter['value'];
             $operator = $filter['operator'];
-            $path = explode('.', $key);
+            $path = \explode('.', $key);
             $original = $path;
 
-            if (1 < count($path)) {
-                $key = array_pop($path);
+            if (1 < \count($path)) {
+                $key = \array_pop($path);
             } else {
                 $path = [];
             }
@@ -691,7 +715,7 @@ class MySQL extends Adapter
                 //if($path == "''") { // Handle direct attributes queries
                 $where[] = 'JOIN `'.$this->getNamespace().".database.properties` b{$i} ON a.uid IS NOT NULL AND b{$i}.documentUid = a.uid AND (b{$i}.key = {$key} AND b{$i}.value {$operator} {$value})";
             } else { // Handle direct child attributes queries
-                $len = count($original);
+                $len = \count($original);
                 $prev = 'c'.$i;
 
                 foreach ($original as $y => $part) {
@@ -709,11 +733,12 @@ class MySQL extends Adapter
             }
         }
 
-        $where = implode("\n", $where);
-        $join = implode("\n", $join);
+        $where = \implode("\n", $where);
+        $join = \implode("\n", $join);
+        $attribute = $this->getPDO()->quote($options['attribute'], PDO::PARAM_STR);
         $func = 'JOIN `'.$this->getNamespace().".database.properties` b_func ON a.uid IS NOT NULL
             AND a.uid = b_func.documentUid
-            AND (b_func.key = 'sizeOriginal')";
+            AND (b_func.key = {$attribute})";
         $roles = [];
 
         foreach (Authorization::getRoles() as $role) {
@@ -724,12 +749,12 @@ class MySQL extends Adapter
             $roles = ['1=1'];
         }
 
-        $query = 'SELECT SUM(b_func.value) as result
-            FROM `'.$this->getNamespace().".database.documents` a {$where}{$join}{$func}
+        $query = "SELECT SUM(b_func.value) as result
+            FROM `".$this->getNamespace().".database.documents` a {$where}{$join}{$func}
             WHERE status = 0
-               AND (".implode('||', $roles).')';
+               AND (".\implode('||', $roles).')';
 
-        $st = $this->getPDO()->prepare(sprintf($query));
+        $st = $this->getPDO()->prepare(\sprintf($query));
 
         $st->execute();
 
@@ -738,21 +763,23 @@ class MySQL extends Adapter
         $this->resetDebug();
 
         $this
-            ->setDebug('query', preg_replace('/\s+/', ' ', sprintf($query)))
-            ->setDebug('time', microtime(true) - $start)
-            ->setDebug('filters', count($options['filters']))
-            ->setDebug('joins', substr_count($query, 'JOIN'))
+            ->setDebug('query', \preg_replace('/\s+/', ' ', \sprintf($query)))
+            ->setDebug('time', \microtime(true) - $start)
+            ->setDebug('filters', \count($options['filters']))
+            ->setDebug('joins', \substr_count($query, 'JOIN'))
         ;
 
-        return (int) (isset($result['result'])) ? $result['result'] : 0;
+        return (isset($result['result'])) ? (int)$result['result'] : 0;
     }
 
     /**
      * Get Unique Document ID.
+     *
+     * @return string
      */
-    public function getId()
+    public function getId(): string
     {
-        $unique = uniqid();
+        $unique = \uniqid();
         $attempts = 5;
 
         for ($i = 1; $i <= $attempts; ++$i) {
@@ -769,7 +796,7 @@ class MySQL extends Adapter
     /**
      * Last Modified.
      *
-     * Return unix timestamp of last time a node queried in corrent session has been changed
+     * Return Unix timestamp of last time a node queried in corrent session has been changed
      *
      * @return int
      */
@@ -796,7 +823,7 @@ class MySQL extends Adapter
         $operator = null;
 
         foreach ($operatorsMap as $node) {
-            if (strpos($filter, $node) !== false) {
+            if (\strpos($filter, $node) !== false) {
                 $operator = $node;
                 break;
             }
@@ -806,9 +833,9 @@ class MySQL extends Adapter
             throw new Exception('Invalid operator');
         }
 
-        $filter = explode($operator, $filter);
+        $filter = \explode($operator, $filter);
 
-        if (count($filter) != 2) {
+        if (\count($filter) != 2) {
             throw new Exception('Invalid filter expression');
         }
 
@@ -833,7 +860,7 @@ class MySQL extends Adapter
      */
     protected function getDataType($value)
     {
-        switch (gettype($value)) {
+        switch (\gettype($value)) {
 
             case 'string':
                 return self::DATA_TYPE_STRING;
@@ -852,7 +879,7 @@ class MySQL extends Adapter
                 break;
 
             case 'array':
-                if ((bool) count(array_filter(array_keys($value), 'is_string'))) {
+                if ((bool) \count(\array_filter(\array_keys($value), 'is_string'))) {
                     return self::DATA_TYPE_DICTIONARY;
                 }
 
@@ -864,16 +891,16 @@ class MySQL extends Adapter
                 break;
         }
 
-        throw new Exception('Unknown data type: '.$value.' ('.gettype($value).')');
+        throw new Exception('Unknown data type: '.$value.' ('.\gettype($value).')');
     }
 
     /**
-     * @param $key
-     * @param $value
+     * @param string $key
+     * @param mixed $value
      *
      * @return $this
      */
-    public function setDebug($key, $value)
+    public function setDebug(string $key, $value): self
     {
         $this->debug[$key] = $value;
 
@@ -883,15 +910,17 @@ class MySQL extends Adapter
     /**
      * @return array
      */
-    public function getDebug()
+    public function getDebug(): array
     {
         return $this->debug;
     }
 
     /**
      * return $this;.
+     *
+     * @return void
      */
-    public function resetDebug()
+    public function resetDebug(): void
     {
         $this->debug = [];
     }
@@ -901,7 +930,7 @@ class MySQL extends Adapter
      *
      * @throws Exception
      */
-    protected function getPDO():PDO
+    protected function getPDO(): PDO
     {
         return $this->register->get('db');
     }
@@ -911,7 +940,7 @@ class MySQL extends Adapter
      *
      * @return Client
      */
-    protected function getRedis():Client
+    protected function getRedis(): Client
     {
         return $this->register->get('cache');
     }

@@ -9,20 +9,7 @@
       let preview = window.document.createElement("ul");
       let add = window.document.createElement("input");
 
-      tags.className = "tags";
-
-      preview.className = "tags-list";
-
-      add.type = "text";
-      add.className = "add";
-
-      //add.required = element.required;
-
-      tags.addEventListener("click", function() {
-        add.focus();
-      });
-
-      add.addEventListener("keydown", function(event) {
+      let listen = function(event) {
         if (
           (event.key === "Enter" || event.key === " " || event.key === "Tab") &&
           add.value.length > 0
@@ -51,8 +38,8 @@
         }
 
         return false;
-      });
-
+      };
+      
       let check = function() {
         try {
           array = JSON.parse(element.value) || [];
@@ -69,6 +56,10 @@
         for (let index = 0; index < array.length; index++) {
           let value = array[index];
           let tag = window.document.createElement("li");
+
+          if(!value || value === ' ') {
+            continue;
+          }
 
           tag.className = "tag";
           tag.textContent = value;
@@ -90,6 +81,33 @@
           add.setCustomValidity("");
         }
       };
+
+      tags.className = "tags";
+
+      preview.className = "tags-list";
+
+      add.type = "text";
+      add.className = "add";
+      add.placeholder = element.placeholder;
+
+      //add.required = element.required;
+
+      tags.addEventListener("click", function() {
+        add.focus();
+      });
+
+      add.addEventListener("keydown", listen);
+      add.addEventListener("blur", function(event) {
+        if(add.value !== '') {
+          array.push(add.value);
+
+          add.value = "";
+
+          element.value = JSON.stringify(array);
+
+          check();
+        }
+      });
 
       tags.appendChild(preview);
       tags.appendChild(add);

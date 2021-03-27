@@ -1,6 +1,6 @@
 <?php
 
-global $utopia;
+use Utopia\App;
 
 /**
  * TODO:
@@ -12,8 +12,9 @@ global $utopia;
  *  6. Write tests!
  */
 
-$utopia->post('/v1/graphql')
+App::post('/v1/graphql')
     ->desc('GraphQL Endpoint')
+    ->groups(['api', 'graphql'])
     ->label('scope', 'public')
     ->action(
         function () {

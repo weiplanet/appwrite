@@ -23,13 +23,13 @@ class Template extends View
             return '';
         }
 
-        if (is_readable($this->path)) {
-            $template = file_get_contents($this->path); // Include template file
+        if (\is_readable($this->path)) {
+            $template = \file_get_contents($this->path); // Include template file
         } else {
             throw new Exception('"'.$this->path.'" template is not readable or not found');
         }
 
-        $template = str_replace(array_keys($this->params), array_values($this->params), $template);
+        $template = \str_replace(\array_keys($this->params), \array_values($this->params), $template);
 
         return $template;
     }
@@ -45,7 +45,7 @@ class Template extends View
      */
     public static function parseURL($url)
     {
-        return parse_url($url);
+        return \parse_url($url);
     }
 
     /**
@@ -89,10 +89,40 @@ class Template extends View
     {
         $parsed = [];
 
-        parse_str($query1, $parsed);
+        \parse_str($query1, $parsed);
 
-        $parsed = array_merge($parsed, $query2);
+        $parsed = \array_merge($parsed, $query2);
 
-        return http_build_query($parsed);
+        return \http_build_query($parsed);
+    }
+
+    /**
+     * From Camel Case
+     * 
+     * @var string $input
+     * 
+     * @return string
+     */
+    public static function fromCamelCaseToSnake($input): string
+    {
+        \preg_match_all('!([A-Z][A-Z0-9]*(?=$|[A-Z][a-z0-9])|[A-Za-z][a-z0-9]+)!', $input, $matches);
+        $ret = $matches[0];
+        foreach ($ret as &$match) {
+            $match = $match == \strtoupper($match) ? \strtolower($match) : \lcfirst($match);
+        }
+
+        return \implode('_', $ret);
+    }
+
+    /**
+     * From Camel Case to Dash Case
+     * 
+     * @var string $input
+     * 
+     * @return string
+     */
+    public static function fromCamelCaseToDash($input): string
+    {
+        return \str_replace([' ', '_'], '-', \strtolower(\preg_replace('/([a-zA-Z])(?=[A-Z])/', '$1-', $input)));
     }
 }

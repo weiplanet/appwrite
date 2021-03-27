@@ -17,19 +17,19 @@ class Document extends ArrayObject
      *
      * @see ArrayObject::__construct
      *
-     * @param null   $input
+     * @param array $input
      * @param int    $flags
      * @param string $iterator_class
      */
-    public function __construct($input = null, $flags = 0, $iterator_class = 'ArrayIterator')
+    public function __construct($input = [], $flags = 0, $iterator_class = 'ArrayIterator')
     {
         foreach ($input as $key => &$value) {
-            if (is_array($value)) {
-                if (isset($value['$id']) || isset($value['$collection'])) {
+            if (\is_array($value)) {
+                if ((isset($value['$id']) || isset($value['$collection'])) && (!$value instanceof self)) {
                     $input[$key] = new self($value);
                 } else {
                     foreach ($value as $childKey => $child) {
-                        if (isset($child['$id']) || isset($child['$collection'])) {
+                        if ((isset($child['$id']) || isset($child['$collection'])) && (!$child instanceof self)) {
                             $value[$childKey] = new self($child);
                         }
                     }
@@ -49,7 +49,7 @@ class Document extends ArrayObject
     }
 
     /**
-     * @return int|null
+     * @return string
      */
     public function getCollection()
     {
@@ -76,7 +76,7 @@ class Document extends ArrayObject
      */
     public function getAttribute($name, $default = null)
     {
-        $name = explode('.', $name);
+        $name = \explode('.', $name);
 
         $temp = &$this;
 
@@ -109,12 +109,12 @@ class Document extends ArrayObject
                 $this[$key] = $value;
                 break;
             case self::SET_TYPE_APPEND:
-                $this[$key] = (!isset($this[$key]) || !is_array($this[$key])) ? [] : $this[$key];
-                array_push($this[$key], $value);
+                $this[$key] = (!isset($this[$key]) || !\is_array($this[$key])) ? [] : $this[$key];
+                \array_push($this[$key], $value);
                 break;
             case self::SET_TYPE_PREPEND:
-                $this[$key] = (!isset($this[$key]) || !is_array($this[$key])) ? [] : $this[$key];
-                array_unshift($this[$key], $value);
+                $this[$key] = (!isset($this[$key]) || !\is_array($this[$key])) ? [] : $this[$key];
+                \array_unshift($this[$key], $value);
                 break;
         }
 
@@ -134,7 +134,7 @@ class Document extends ArrayObject
      */
     public function removeAttribute($key)
     {
-        if(isset($this[$key])) {
+        if (isset($this[$key])) {
             unset($this[$key]);
         }
 
@@ -154,15 +154,15 @@ class Document extends ArrayObject
      */
     public function search($key, $value, $scope = null)
     {
-        $array = (!is_null($scope)) ? $scope : $this;
+        $array = (!\is_null($scope)) ? $scope : $this;
 
-        if (is_array($array)  || $array instanceof self) {
+        if (\is_array($array)  || $array instanceof self) {
             if (isset($array[$key]) && $array[$key] == $value) {
                 return $array;
             }
 
             foreach ($array as $k => $v) {
-                if ((is_array($v) || $v instanceof self) && (!empty($v))) {
+                if ((\is_array($v) || $v instanceof self) && (!empty($v))) {
                     $result = $this->search($key, $value, $v);
 
                     if (!empty($result)) {
@@ -194,6 +194,18 @@ class Document extends ArrayObject
     }
 
     /**
+     * Checks if a document key is set.
+     *
+     * @param string $key
+     *
+     * @return bool
+     */
+    public function isSet($key)
+    {
+        return isset($this[$key]);
+    }
+
+    /**
      * Get Array Copy.
      *
      * Outputs entity as a PHP array
@@ -207,20 +219,20 @@ class Document extends ArrayObject
     {
         $array = parent::getArrayCopy();
 
-        $output = array();
+        $output = [];
 
         foreach ($array as $key => &$value) {
-            if (!empty($whitelist) && !in_array($key, $whitelist)) { // Export only whitelisted fields
+            if (!empty($whitelist) && !\in_array($key, $whitelist)) { // Export only whitelisted fields
                 continue;
             }
 
-            if (!empty($blacklist) && in_array($key, $blacklist)) { // Don't export blacklisted fields
+            if (!empty($blacklist) && \in_array($key, $blacklist)) { // Don't export blacklisted fields
                 continue;
             }
 
             if ($value instanceof self) {
                 $output[$key] = $value->getArrayCopy($whitelist, $blacklist);
-            } elseif (is_array($value)) {
+            } elseif (\is_array($value)) {
                 foreach ($value as $childKey => &$child) {
                     if ($child instanceof self) {
                         $output[$key][$childKey] = $child->getArrayCopy($whitelist, $blacklist);
