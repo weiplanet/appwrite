@@ -27,6 +27,7 @@ class Database
 
     // Auth, Account and Users (private to user)
     const SYSTEM_COLLECTION_USERS = 'users';
+    const SYSTEM_COLLECTION_SESSIONS = 'sessions';
     const SYSTEM_COLLECTION_TOKENS = 'tokens';
 
     // Teams (shared among team members)
@@ -144,10 +145,11 @@ class Database
 
     /**
      * @param array $options
+     * @param array $filterTypes
      *
      * @return Document[]
      */
-    public function getCollection(array $options)
+    public function getCollection(array $options, array $filterTypes = [])
     {
         $options = \array_merge([
             'offset' => 0,
@@ -160,7 +162,7 @@ class Database
             'filters' => [],
         ], $options);
 
-        $results = $this->adapter->getCollection($options);
+        $results = $this->adapter->getCollection($options, $filterTypes);
 
         foreach ($results as &$node) {
             $node = $this->decode(new Document($node));
@@ -367,6 +369,18 @@ class Database
     public function deleteUniqueKey($key)
     {
         return new Document($this->adapter->deleteUniqueKey($key));
+    }
+
+    /**
+     * @param int $key
+     *
+     * @return Document|false
+     *
+     * @throws AuthorizationException
+     */
+    public function addUniqueKey($key)
+    {
+        return new Document($this->adapter->addUniqueKey($key));
     }
 
     /**

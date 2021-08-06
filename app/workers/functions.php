@@ -6,29 +6,29 @@ use Appwrite\Database\Adapter\MySQL as MySQLAdapter;
 use Appwrite\Database\Adapter\Redis as RedisAdapter;
 use Appwrite\Database\Validator\Authorization;
 use Appwrite\Event\Event;
+use Appwrite\Resque\Worker;
+use Appwrite\Utopia\Response\Model\Execution;
 use Cron\CronExpression;
 use Swoole\Runtime;
 use Utopia\App;
 use Utopia\CLI\Console;
 use Utopia\Config\Config;
 
-require_once __DIR__.'/../init.php';
+require_once __DIR__.'/../workers.php';
+
+Runtime::enableCoroutine(0);
 
 Console::title('Functions V1 Worker');
-
-Runtime::setHookFlags(SWOOLE_HOOK_ALL);
-
 Console::success(APP_NAME.' functions worker v1 has started');
 
-$environments = Config::getParam('environments');
+$runtimes = Config::getParam('runtimes');
 
 /**
  * Warmup Docker Images
  */
 $warmupStart = \microtime(true);
 
-Co\run(function() use ($environments) {  // Warmup: make sure images are ready to run fast 🚀
-    Runtime::enableCoroutine(SWOOLE_HOOK_ALL);
+Co\run(function() use ($runtimes) {  // Warmup: make sure images are ready to run fast 🚀
 
     $dockerUser = App::getEnv('DOCKERHUB_PULL_USERNAME', null);
     $dockerPass = App::getEnv('DOCKERHUB_PULL_PASSWORD', null);
@@ -41,14 +41,14 @@ Co\run(function() use ($environments) {  // Warmup: make sure images are ready t
         Console::log('Docker Login'. $stdout.$stderr);
     }
 
-    foreach($environments as $environment) {
-        go(function() use ($environment) {
+    foreach($runtimes as $runtime) {
+        go(function() use ($runtime) {
             $stdout = '';
             $stderr = '';
         
-            Console::info('Warming up '.$environment['name'].' '.$environment['version'].' environment...');
+            Console::info('Warming up '.$runtime['name'].' '.$runtime['version'].' environment...');
         
-            Console::execute('docker pull '.$environment['image'], '', $stdout, $stderr);
+            Console::execute('docker pull '.$runtime['image'], '', $stdout, $stderr);
         
             if(!empty($stdout)) {
                 Console::log($stdout);
@@ -71,9 +71,6 @@ Console::success('Finished warmup in '.$warmupTime.' seconds');
  */
 $stdout = '';
 $stderr = '';
-
-$exitCode = Console::execute('docker ps --all --format "name={{.Names}}&status={{.Status}}&labels={{.Labels}}" --filter label=appwrite-type=function'
-    , '', $stdout, $stderr, 30);
 
 $executionStart = \microtime(true);
 
@@ -127,30 +124,37 @@ Console::info(count($list)." functions listed in " . ($executionEnd - $execution
 
 //TODO aviod scheduled execution if delay is bigger than X offest
 
-class FunctionsV1
+class FunctionsV1 extends Worker
 {
     public $args = [];
 
     public $allowed = [];
 
-    public function setUp(): void
+    public function init(): void
     {
     }
 
-    public function perform()
+    public function run(): void
     {
         global $register;
 
+        $db = $register->get('db');
+        $cache = $register->get('cache');
+
         $projectId = $this->args['projectId'] ?? '';
         $functionId = $this->args['functionId'] ?? '';
+        $webhooks = $this->args['webhooks'] ?? [];
         $executionId = $this->args['executionId'] ?? '';
         $trigger = $this->args['trigger'] ?? '';
         $event = $this->args['event'] ?? '';
         $scheduleOriginal = $this->args['scheduleOriginal'] ?? '';
-        $payload = (!empty($this->args['payload'])) ? json_encode($this->args['payload']) : '';
+        $eventData = (!empty($this->args['eventData'])) ? json_encode($this->args['eventData']) : '';
+        $data = $this->args['data'] ?? '';
+        $userId = $this->args['userId'] ?? '';
+        $jwt = $this->args['jwt'] ?? '';
 
         $database = new Database();
-        $database->setAdapter(new RedisAdapter(new MySQLAdapter($register), $register));
+        $database->setAdapter(new RedisAdapter(new MySQLAdapter($db, $cache), $cache));
         $database->setNamespace('app_'.$projectId);
         $database->setMocks(Config::getParam('collections', []));
 
@@ -195,7 +199,7 @@ class FunctionsV1
 
                         Console::success('Triggered function: '.$event);
 
-                        $this->execute('event', $projectId, '', $database, $function, $event, $payload);
+                        $this->execute('event', $projectId, '', $database, $function, $event, $eventData, $data, $webhooks, $userId, $jwt);
                     }
                 }
                 break;
@@ -245,14 +249,14 @@ class FunctionsV1
 
                 ResqueScheduler::enqueueAt($next, 'v1-functions', 'FunctionsV1', [
                     'projectId' => $projectId,
+                    'webhooks' => $webhooks,
                     'functionId' => $function->getId(),
                     'executionId' => null,
                     'trigger' => 'schedule',
                     'scheduleOriginal' => $function->getAttribute('schedule', ''),
                 ]);  // Async task rescheduale
 
-                $this->execute($trigger, $projectId, $executionId, $database, $function);
-                
+                $this->execute($trigger, $projectId, $executionId, $database, $function, /*$event*/'', /*$eventData*/'', $data, $webhooks, $userId, $jwt);
                 break;
 
             case 'http':
@@ -264,7 +268,7 @@ class FunctionsV1
                     throw new Exception('Function not found ('.$functionId.')');
                 }
 
-                $this->execute($trigger, $projectId, $executionId, $database, $function);
+                $this->execute($trigger, $projectId, $executionId, $database, $function, /*$event*/'', /*$eventData*/'', $data, $webhooks, $userId, $jwt);
                 break;
             
             default:
@@ -282,15 +286,19 @@ class FunctionsV1
      * @param Database $database
      * @param Database $function
      * @param string $event
-     * @param string $payload
+     * @param string $eventData
+     * @param string $data
+     * @param array $webhooks
+     * @param string $userId
+     * @param string $jwt
      * 
      * @return void
      */
-    public function execute(string $trigger, string $projectId, string $executionId, Database $database, Document $function, string $event = '', string $payload = ''): void
+    public function execute(string $trigger, string $projectId, string $executionId, Database $database, Document $function, string $event = '', string $eventData = '', string $data = '', array $webhooks = [], string $userId = '', string $jwt = ''): void
     {
         global $list;
 
-        $environments = Config::getParam('environments');
+        $runtimes = Config::getParam('runtimes');
 
         Authorization::disable();
         $tag = $database->getDocument($function->getAttribute('tag', ''));
@@ -324,12 +332,12 @@ class FunctionsV1
         
         Authorization::reset();
 
-        $environment = (isset($environments[$function->getAttribute('env', '')]))
-            ? $environments[$function->getAttribute('env', '')]
+        $runtime = (isset($runtimes[$function->getAttribute('runtime', '')]))
+            ? $runtimes[$function->getAttribute('runtime', '')]
             : null;
 
-        if(\is_null($environment)) {
-            throw new Exception('Environment "'.$function->getAttribute('env', '').' is not supported');
+        if(\is_null($runtime)) {
+            throw new Exception('Runtime "'.$function->getAttribute('runtime', '').'" is not supported');
         }
 
         $vars = \array_merge($function->getAttribute('vars', []), [
@@ -337,15 +345,19 @@ class FunctionsV1
             'APPWRITE_FUNCTION_NAME' => $function->getAttribute('name', ''),
             'APPWRITE_FUNCTION_TAG' => $tag->getId(),
             'APPWRITE_FUNCTION_TRIGGER' => $trigger,
-            'APPWRITE_FUNCTION_ENV_NAME' => $environment['name'],
-            'APPWRITE_FUNCTION_ENV_VERSION' => $environment['version'],
+            'APPWRITE_FUNCTION_RUNTIME_NAME' => $runtime['name'],
+            'APPWRITE_FUNCTION_RUNTIME_VERSION' => $runtime['version'],
             'APPWRITE_FUNCTION_EVENT' => $event,
-            'APPWRITE_FUNCTION_EVENT_PAYLOAD' => $payload,
+            'APPWRITE_FUNCTION_EVENT_DATA' => $eventData,
+            'APPWRITE_FUNCTION_DATA' => $data,
+            'APPWRITE_FUNCTION_USER_ID' => $userId,
+            'APPWRITE_FUNCTION_JWT' => $jwt,
+            'APPWRITE_FUNCTION_PROJECT_ID' => $projectId,
         ]);
 
         \array_walk($vars, function (&$value, $key) {
             $key = $this->filterEnvKey($key);
-            $value = \escapeshellarg((empty($value)) ? 'null' : $value);
+            $value = \escapeshellarg((empty($value)) ? '' : $value);
             $value = "--env {$key}={$value}";
         });
 
@@ -412,15 +424,24 @@ class FunctionsV1
                 " --volume {$tagPathTargetDir}:/tmp:rw".
                 " --workdir /usr/local/src".
                 " ".\implode(" ", $vars).
-                " {$environment['image']}".
-                " sh -c 'mv /tmp/code.tar.gz /usr/local/src/code.tar.gz && tar -zxf /usr/local/src/code.tar.gz --strip 1 && rm /usr/local/src/code.tar.gz && tail -f /dev/null'"
+                " {$runtime['image']}".
+                " tail -f /dev/null"
             , '', $stdout, $stderr, 30);
 
-            $executionEnd = \microtime(true);
-    
             if($exitCode !== 0) {
                 throw new Exception('Failed to create function environment: '.$stderr);
             }
+
+            $exitCodeUntar = Console::execute("docker exec ".
+                $container.
+                " sh -c 'mv /tmp/code.tar.gz /usr/local/src/code.tar.gz && tar -zxf /usr/local/src/code.tar.gz --strip 1 && rm /usr/local/src/code.tar.gz'"
+                , '', $stdout, $stderr, 60);
+
+            if($exitCodeUntar !== 0) {
+                throw new Exception('Failed to extract tar: '.$stderr);
+            }
+
+            $executionEnd = \microtime(true);
 
             $list[$container] = [
                 'name' => $container,
@@ -469,6 +490,18 @@ class FunctionsV1
             throw new Exception('Failed saving execution to DB', 500);
         }
 
+        $executionModel = new Execution();
+        $executionUpdate = new Event('v1-webhooks', 'WebhooksV1');
+
+        $executionUpdate
+            ->setParam('projectId', $projectId)
+            ->setParam('userId', $userId)
+            ->setParam('webhooks', $webhooks)
+            ->setParam('event', 'functions.executions.update')
+            ->setParam('eventData', $execution->getArrayCopy(array_keys($executionModel->getRules())));
+
+        $executionUpdate->trigger();
+
         $usage = new Event('v1-usage', 'UsageV1');
 
         $usage
@@ -504,7 +537,7 @@ class FunctionsV1
         if(\count($list) > $max) {
             Console::info('Starting containers cleanup');
 
-            \usort($list, function ($item1, $item2) {
+            \uasort($list, function ($item1, $item2) {
                 return (int)($item1['appwrite-created'] ?? 0) <=> (int)($item2['appwrite-created'] ?? 0);
             });
 
@@ -548,7 +581,7 @@ class FunctionsV1
         return $output;
     }
 
-    public function tearDown(): void
+    public function shutdown(): void
     {
     }
 }

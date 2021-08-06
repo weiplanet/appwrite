@@ -1,47 +1,48 @@
 <?php
 
+use Appwrite\Resque\Worker;
 use Utopia\App;
 use Utopia\CLI\Console;
 
-require_once __DIR__.'/../init.php';
+require_once __DIR__.'/../workers.php';
 
 Console::title('Usage V1 Worker');
-
 Console::success(APP_NAME.' usage worker v1 has started');
 
-class UsageV1
+class UsageV1 extends Worker
 {
     /**
      * @var array
      */
     public $args = [];
 
-    public function setUp(): void
+    public function init(): void
     {
     }
 
-    public function perform()
+    public function run(): void
     {
         global $register;
 
+        /** @var \Domnikl\Statsd\Client $statsd */
         $statsd = $register->get('statsd', true);
 
-        $projectId = $this->args['projectId'];
+        $projectId = $this->args['projectId'] ?? '';
 
-        $storage = $this->args['storage'];
+        $storage = $this->args['storage'] ?? 0;
 
-        $networkRequestSize = $this->args['networkRequestSize'];
-        $networkResponseSize = $this->args['networkResponseSize'];
+        $networkRequestSize = $this->args['networkRequestSize'] ?? 0;
+        $networkResponseSize = $this->args['networkResponseSize'] ?? 0;
         
-        $httpMethod = $this->args['httpMethod'];
-        $httpRequest = $this->args['httpRequest'];
+        $httpMethod = $this->args['httpMethod'] ?? '';
+        $httpRequest = $this->args['httpRequest'] ?? 0;
 
-        $functionId = $this->args['functionId'];
-        $functionExecution = $this->args['functionExecution'];
-        $functionExecutionTime = $this->args['functionExecutionTime'];
-        $functionStatus = $this->args['functionStatus'];
+        $functionId = $this->args['functionId'] ?? '';
+        $functionExecution = $this->args['functionExecution'] ?? 0;
+        $functionExecutionTime = $this->args['functionExecutionTime'] ?? 0;
+        $functionStatus = $this->args['functionStatus'] ?? '';
 
-        $tags = ",project={$projectId},version=".App::getEnv('_APP_VERSION', 'UNKNOWN').'';
+        $tags = ",project={$projectId},version=".App::getEnv('_APP_VERSION', 'UNKNOWN');
 
         // the global namespace is prepended to every key (optional)
         $statsd->setNamespace('appwrite.usage');
@@ -52,7 +53,6 @@ class UsageV1
         
         if($functionExecution >= 1) {
             $statsd->increment('executions.all'.$tags.',functionId='.$functionId.',functionStatus='.$functionStatus);
-            var_dump($tags.',functionId='.$functionId.',functionStatus='.$functionStatus);
             $statsd->count('executions.time'.$tags.',functionId='.$functionId, $functionExecutionTime);
         }
 
@@ -65,8 +65,7 @@ class UsageV1
         }
     }
 
-    public function tearDown(): void
+    public function shutdown(): void
     {
-        // ... Remove environment for this job
     }
 }

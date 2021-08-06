@@ -11,7 +11,7 @@ App::get('/v1/health')
     ->desc('Get HTTP')
     ->groups(['api', 'health'])
     ->label('scope', 'health.read')
-    ->label('sdk.platform', [APP_PLATFORM_SERVER])
+    ->label('sdk.auth', [APP_AUTH_TYPE_KEY])
     ->label('sdk.namespace', 'health')
     ->label('sdk.method', 'get')
     ->label('sdk.description', '/docs/references/health/get.md')
@@ -37,17 +37,16 @@ App::get('/v1/health/db')
     ->desc('Get DB')
     ->groups(['api', 'health'])
     ->label('scope', 'health.read')
-    ->label('sdk.platform', [APP_PLATFORM_SERVER])
+    ->label('sdk.auth', [APP_AUTH_TYPE_KEY])
     ->label('sdk.namespace', 'health')
     ->label('sdk.method', 'getDB')
     ->label('sdk.description', '/docs/references/health/get-db.md')
     ->inject('response')
-    ->inject('register')
-    ->action(function ($response, $register) {
+    ->inject('utopia')
+    ->action(function ($response, $utopia) {
         /** @var Appwrite\Utopia\Response $response */
-        /** @var Utopia\Registry\Registry $register */
-
-        $register->get('db'); /* @var $db PDO */
+        /** @var Utopia\App $utopia */
+        $utopia->getResource('db');
 
         $response->json(['status' => 'OK']);
     });
@@ -56,16 +55,16 @@ App::get('/v1/health/cache')
     ->desc('Get Cache')
     ->groups(['api', 'health'])
     ->label('scope', 'health.read')
-    ->label('sdk.platform', [APP_PLATFORM_SERVER])
+    ->label('sdk.auth', [APP_AUTH_TYPE_KEY])
     ->label('sdk.namespace', 'health')
     ->label('sdk.method', 'getCache')
     ->label('sdk.description', '/docs/references/health/get-cache.md')
     ->inject('response')
-    ->inject('register')
-    ->action(function ($response, $register) {
+    ->inject('utopia')
+    ->action(function ($response, $utopia) {
         /** @var Appwrite\Utopia\Response $response */
-        /** @var Utopia\Registry\Registry $register */
-        $register->get('cache'); /* @var $cache Predis\Client */
+        /** @var Utopia\App $utopia */
+        $utopia->getResource('cache');
 
         $response->json(['status' => 'OK']);
     });
@@ -74,7 +73,7 @@ App::get('/v1/health/time')
     ->desc('Get Time')
     ->groups(['api', 'health'])
     ->label('scope', 'health.read')
-    ->label('sdk.platform', [APP_PLATFORM_SERVER])
+    ->label('sdk.auth', [APP_AUTH_TYPE_KEY])
     ->label('sdk.namespace', 'health')
     ->label('sdk.method', 'getTime')
     ->label('sdk.description', '/docs/references/health/get-time.md')
@@ -123,7 +122,7 @@ App::get('/v1/health/queue/webhooks')
     ->desc('Get Webhooks Queue')
     ->groups(['api', 'health'])
     ->label('scope', 'health.read')
-    ->label('sdk.platform', [APP_PLATFORM_SERVER])
+    ->label('sdk.auth', [APP_AUTH_TYPE_KEY])
     ->label('sdk.namespace', 'health')
     ->label('sdk.method', 'getQueueWebhooks')
     ->label('sdk.description', '/docs/references/health/get-queue-webhooks.md')
@@ -138,7 +137,7 @@ App::get('/v1/health/queue/tasks')
     ->desc('Get Tasks Queue')
     ->groups(['api', 'health'])
     ->label('scope', 'health.read')
-    ->label('sdk.platform', [APP_PLATFORM_SERVER])
+    ->label('sdk.auth', [APP_AUTH_TYPE_KEY])
     ->label('sdk.namespace', 'health')
     ->label('sdk.method', 'getQueueTasks')
     ->label('sdk.description', '/docs/references/health/get-queue-tasks.md')
@@ -153,7 +152,7 @@ App::get('/v1/health/queue/logs')
     ->desc('Get Logs Queue')
     ->groups(['api', 'health'])
     ->label('scope', 'health.read')
-    ->label('sdk.platform', [APP_PLATFORM_SERVER])
+    ->label('sdk.auth', [APP_AUTH_TYPE_KEY])
     ->label('sdk.namespace', 'health')
     ->label('sdk.method', 'getQueueLogs')
     ->label('sdk.description', '/docs/references/health/get-queue-logs.md')
@@ -168,7 +167,7 @@ App::get('/v1/health/queue/usage')
     ->desc('Get Usage Queue')
     ->groups(['api', 'health'])
     ->label('scope', 'health.read')
-    ->label('sdk.platform', [APP_PLATFORM_SERVER])
+    ->label('sdk.auth', [APP_AUTH_TYPE_KEY])
     ->label('sdk.namespace', 'health')
     ->label('sdk.method', 'getQueueUsage')
     ->label('sdk.description', '/docs/references/health/get-queue-usage.md')
@@ -183,7 +182,7 @@ App::get('/v1/health/queue/certificates')
     ->desc('Get Certificate Queue')
     ->groups(['api', 'health'])
     ->label('scope', 'health.read')
-    ->label('sdk.platform', [APP_PLATFORM_SERVER])
+    ->label('sdk.auth', [APP_AUTH_TYPE_KEY])
     ->label('sdk.namespace', 'health')
     ->label('sdk.method', 'getQueueCertificates')
     ->label('sdk.description', '/docs/references/health/get-queue-certificates.md')
@@ -198,7 +197,7 @@ App::get('/v1/health/queue/functions')
     ->desc('Get Functions Queue')
     ->groups(['api', 'health'])
     ->label('scope', 'health.read')
-    ->label('sdk.platform', [APP_PLATFORM_SERVER])
+    ->label('sdk.auth', [APP_AUTH_TYPE_KEY])
     ->label('sdk.namespace', 'health')
     ->label('sdk.method', 'getQueueFunctions')
     ->label('sdk.description', '/docs/references/health/get-queue-functions.md')
@@ -213,7 +212,7 @@ App::get('/v1/health/storage/local')
     ->desc('Get Local Storage')
     ->groups(['api', 'health'])
     ->label('scope', 'health.read')
-    ->label('sdk.platform', [APP_PLATFORM_SERVER])
+    ->label('sdk.auth', [APP_AUTH_TYPE_KEY])
     ->label('sdk.namespace', 'health')
     ->label('sdk.method', 'getStorageLocal')
     ->label('sdk.description', '/docs/references/health/get-storage-local.md')
@@ -245,7 +244,7 @@ App::get('/v1/health/anti-virus')
     ->desc('Get Anti virus')
     ->groups(['api', 'health'])
     ->label('scope', 'health.read')
-    ->label('sdk.platform', [APP_PLATFORM_SERVER])
+    ->label('sdk.auth', [APP_AUTH_TYPE_KEY])
     ->label('sdk.namespace', 'health')
     ->label('sdk.method', 'getAntiVirus')
     ->label('sdk.description', '/docs/references/health/get-storage-anti-virus.md')
@@ -262,18 +261,24 @@ App::get('/v1/health/anti-virus')
 
         $antiVirus = new Network(App::getEnv('_APP_STORAGE_ANTIVIRUS_HOST', 'clamav'),
             (int) App::getEnv('_APP_STORAGE_ANTIVIRUS_PORT', 3310));
-
-        $response->json([
-            'status' => (@$antiVirus->ping()) ? 'online' : 'offline',
-            'version' => @$antiVirus->version(),
-        ]);
+        try {
+            $response->json([
+                'status' => (@$antiVirus->ping()) ? 'online' : 'offline',
+                'version' => @$antiVirus->version(),
+            ]);
+        } catch( \Exception $e) {
+            $response->json([
+                'status' => 'offline',
+                'version' => '',
+            ]);
+        }
     });
 
 App::get('/v1/health/stats') // Currently only used internally
     ->desc('Get System Stats')
     ->groups(['api', 'health'])
-    ->label('scope', 'god')
-    // ->label('sdk.platform', [APP_PLATFORM_SERVER])
+    ->label('scope', 'root')
+    // ->label('sdk.auth', [APP_AUTH_TYPE_KEY])
     // ->label('sdk.namespace', 'health')
     // ->label('sdk.method', 'getStats')
     ->label('docs', false)

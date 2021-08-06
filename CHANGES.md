@@ -1,8 +1,135 @@
-# Version 0.8.0 (Not Released Yet)
+# Version 0.9.3
 
-- Anonymous login
+## Bugs
 
-# Version 0.7.2 (Not Released Yet)
+- Fixed Abuse Limit keys for JWT and E-Mail confirmation (#1434)
+
+# Version 0.9.2
+
+## Bugs
+
+- Fixed JWT session validation (#1408)
+- Fixed passing valid JWT session to Cloud Functions (#1421)
+- Fixed race condition when uploading and extracting bigger Cloud Functions (#1419)
+
+# Version 0.9.1
+
+## Bugs
+
+- Fixed PDO Connection timeout (#1385)
+- Removed unnecessary `app` resource and replace with `utopia` (#1384)
+- Fixed missing quote in Functions Worker logs (#1375)
+
+# Version 0.9.0
+
+## Features
+
+- Added support for Android
+- Added a new Cloud Functions runtime for
+  - Java 16.0
+  - Java 11.0
+  - Node 16.0
+  - Dart 2.13
+- Added a new gravity option when croping storage images using the file preview endpoint (#1260)
+- Upgraded GEOIP DB file to Jun 2021 release (#1256)
+- Added file created date to file info on the console (#1183)
+- Added file size to file info on the console (#1183)
+- Added internal support for connection pools for improved performance (#1278)
+- Added new abstraction for workers executable files (#1276)
+- Added a new API in the Users API to allow you to force update your user verification status (#1223)
+- Using a fixed commit to avoid breaking changes for imagemagick extenstion (#1274)
+- Updated the design of all the email templates (#1225)
+- Refactored Devices page in Console: (#1167)
+  - Renamed *Devices* to *Sessions*
+  - Add Provider Icon to each Session
+  - Add Anonymous Account Placeholder
+- Upgraded phpmailer version to 6.5.0 (#1317)
+- Upgraded telegraf docker image version to v1.2.0
+- Added new environment variables to the `telegraf` service: (#1202)
+  - _APP_INFLUXDB_HOST
+  - _APP_INFLUXDB_PORT
+- Added `expires` parameter to Account Recovery and Email Validation URL's
+- Added new endpoint to get a session based on it's ID (#1294)
+- Added added a new version param to the migration script (#1342)
+- Improved Queue Interval for all workers from 5 seconds to 1 (#1308 Thanks to @Meldiron)
+
+## Breaking Changes (Read before upgrading!)
+- Renamed `env` param on `/v1/functions` to `runtime` (#1314)
+- Renamed `deleteUser` method in all SDKs to `delete` (#1216)
+
+## Bugs
+
+- Fixed bug causing runtimes conflict and hanging executions when max Functions containers limit passed (#1288)
+- Fixed 404 error when removing a project member on the Appwrite console (#1214)
+- Fixed Swoole buffer output size to allow downloading files bigger than allowed size (#1189)
+- Fixed ClamAV status when anti virus is not running (#1188)
+- Fixed deleteSession which was removing cookieFallback from the localstorage on any logout instead of current session (#1206)
+- Fixed Nepal flag (#1173)
+- Fixed a bug in the Twitch OAuth adapter (#1209)
+- Fixed missing session object when OAuth session creation event is triggered (#1208)
+- Fixed bug where we didn't ignore the email case, converted all emails to lowercase internally (#1243)
+- Fixed a console bug where you can't click a user with no name, added a placehoder for anonyomous users (#1220)
+- Fixed unique keys not being updated when changing a user's email address (#1301)
+- Fixed a bug where decimal integers where wrongly used with database filters (#1349)
+
+## Security
+
+- Fixed potential XSS injection on the console
+
+# Version 0.8.0
+
+## Features
+- Refactoring SSL generation to work on every request so no domain environment variable is required for SSL generation (#1133)
+- Added Anonymous Login ([RFC-010](https://github.com/appwrite/rfc/blob/main/010-anonymous-login.md), #914)
+- Added events for functions and executions (#971)
+- Added JWT support (#784)
+- Added ARM support (#726)
+- New awesome image preview features, supports borderRadius, borderColor, borderWidth 
+- Split token & session models to become 2 different internal entities (#922)
+- Added Dart 2.12 as a new Cloud Functions runtime (#989)
+- Added option to disable email/password (#947)
+- Added option to disable anonymous login (need to merge and apply changed) (#947)
+- Added option to disable JWT auth (#947)
+- Added option to disable team invites (#947)
+- Option to limit number of users (good for app launches + root account PR) (#947)
+- Added 2 new endpoints to the projects API to allow new settings 
+- Enabled 501 errors (Not Implemented) from the error handler
+- Added Python 3.9 as a new Cloud Functions runtime (#1044)
+- Added Deno 1.8 as a new Cloud Functions runtime (#989)
+- Upgraded to PHP 8.0 (#713)
+- ClamAV is now disabled by default to allow lower min requirements for Appwrite (#1064)
+- Added a new env var named `_APP_LOCALE` that allow to change the default `en` locale value (#1056)
+- Updated all the console bottom control to be consistent. Dropped the `+` icon (#1062)
+- Added Response Models for Documents and Preferences (#1075, #1102)
+- Added new endpoint to update team membership roles (#1142)
+- Removed DB connection from webhooks worker for improved performance (#1150)
+
+## Bugs
+
+- Fixed default value for HTTPS force option
+- Fixed form array casting in dashboard (#1070)
+- Fixed collection document rule form in dashboard (#1069)
+- Bugs in the Teams API:
+  - Fixed incorrect audit worker event names (#1143)
+  - Increased limit of memberships fetched in `createTeamMembership` to 2000 (#1143)
+  - Fixed exception thrown when SSL certificate is already stored in the database (#1151)
+- Fixed user delete button in the Appwrite console (#1216)
+- Fixed missing placeholder for user name when empty (#1220)
+
+## Breaking Changes (Read before upgrading!)
+
+- Rename `deleteuser` to `delete` on Users Api (#1089)
+- Environment variable `_APP_FUNCTIONS_ENVS` renamed to `_APP_FUNCTIONS_RUNTIMES` (#1101)
+- Only logged in users can execute functions (for guests, use anonymous login) (#976)
+- Only the user who has triggered the execution get access to the relevant execution logs (#1045)
+- Function execution environment variable `APPWRITE_FUNCTION_EVENT_PAYLOAD` renamed to `APPWRITE_FUNCTION_EVENT_DATA`  (#1045)
+- Function execution environment variable `APPWRITE_FUNCTION_ENV_NAME` renamed to `APPWRITE_FUNCTION_RUNTIME_NAME` (#1101)
+- Function execution environment variable `APPWRITE_FUNCTION_ENV_VERSION` renamed to `APPWRITE_FUNCTION_RUNTIME_VERSION` (#1101)
+- Introduces rate limits for:
+  - Team invite (10 requests in every 60 minutes per IP address) (#1088)
+- Rename param `inviteId` to the more accurate `membershipId` in the Teams API (#1129)
+
+# Version 0.7.2
 
 ## Features
 
@@ -31,6 +158,7 @@
 - Force adding a security email on setup
 - SMTP is now disabled by default, no dummy SMTP is included in setup
 - Added a new endpoint that returns the server and SDKs latest versions numbers #941
+- Custom data strings, userId, and JWT available for cloud functions #967
 
 ## Upgrades
 

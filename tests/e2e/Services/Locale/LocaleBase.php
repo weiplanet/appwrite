@@ -97,8 +97,8 @@ trait LocaleBase
         $this->assertEquals($response['headers']['status-code'], 200);
         $this->assertEquals(27, $response['body']['sum']);
         $this->assertIsArray($response['body']['countries']);
-        $this->assertEquals($response['body']['countries'][0]['name'], 'Austria');
-        $this->assertEquals($response['body']['countries'][0]['code'], 'AT');
+        $this->assertEquals($response['body']['countries'][0]['name'], 'Alemania');
+        $this->assertEquals($response['body']['countries'][0]['code'], 'DE');
 
         
         /**
@@ -123,8 +123,8 @@ trait LocaleBase
         $this->assertEquals(194, $response['body']['sum']);
         $this->assertIsArray($response['body']['phones']);
         $this->assertEquals($response['body']['phones'][0]['code'], '+1');
-        $this->assertEquals($response['body']['phones'][0]['countryName'], 'United States');
-        $this->assertEquals($response['body']['phones'][0]['countryCode'], 'US');
+        $this->assertEquals($response['body']['phones'][0]['countryName'], 'Canada');
+        $this->assertEquals($response['body']['phones'][0]['countryCode'], 'CA');
         
         /**
          * Test for FAILURE
@@ -222,14 +222,14 @@ trait LocaleBase
         return [];
     }
 
-    public function testLangaugaes(): array
+    public function testLanguages(): array
     {
         /**
          * Test for SUCCESS
          */
         $languages           = require('app/config/locale/codes.php');
-        $defaultCountries    = require('app/config/locale/translations/en.countries.php');
-        $defaultContinents   = require('app/config/locale/translations/en.continents.php');
+        $defaultCountries    = require('app/config/locale/countries.php');
+        $defaultContinents   = require('app/config/locale/continents.php');
 
         foreach ($languages as $lang) {
             $response = $this->client->call(Client::METHOD_GET, '/locale/countries', [
@@ -239,11 +239,11 @@ trait LocaleBase
             ]);
 
             if(!\is_array($response['body']['countries'])) {
-                throw new Exception('Failed to itterate locale: '.$lang);
+                throw new Exception('Failed to iterate locale: '.$lang);
             }
 
             foreach ($response['body']['countries'] as $i => $code) {
-                $this->assertArrayHasKey($code['code'], $defaultCountries, $code['code'] . ' country should be removed from ' . $lang);
+                $this->assertContains($code['code'], $defaultCountries, $code['code'] . ' country should be removed from ' . $lang);
             }
 
             // foreach (array_keys($defaultCountries) as $i => $code) {
@@ -260,7 +260,7 @@ trait LocaleBase
             ]);
             
             foreach ($response['body']['continents'] as $i => $code) {
-                $this->assertArrayHasKey($code['code'], $defaultContinents, $code['code'] . ' continent should be removed from ' . $lang);
+                $this->assertContains($code['code'], $defaultContinents, $code['code'] . ' continent should be removed from ' . $lang);
             }
 
             // foreach (array_keys($defaultContinents) as $i => $code) {

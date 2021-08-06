@@ -234,11 +234,11 @@
           }
         }
 
-        if (data[key]) {
+        if (typeof data[key] !== 'undefined') {
           result = data[key];
         }
 
-        if (!result) {
+        if (typeof result === 'undefined') {
           result = "";
         }
 
@@ -257,7 +257,7 @@
           args.map(function(value) {
             let result = getValue(value, prefix, data);
 
-            return result;
+            return result ?? undefined;
           })
         );
       };

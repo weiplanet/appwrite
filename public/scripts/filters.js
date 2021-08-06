@@ -234,23 +234,23 @@ window.ls.filter
 
     return $value.join(", ").replace(/,\s([^,]+)$/, ' and $1');
   })
-  .add("envName", function($value, env) {
-    if(env && env.ENVIRONMENTS && env.ENVIRONMENTS[$value]) {
-      return env.ENVIRONMENTS[$value].name;
+  .add("runtimeName", function($value, env) {
+    if(env && env.RUNTIMES && env.RUNTIMES[$value]) {
+      return env.RUNTIMES[$value].name;
     }
 
     return '';
   })
-  .add("envLogo", function($value, env) {
-    if(env && env.ENVIRONMENTS && env.ENVIRONMENTS[$value]) {
-      return env.ENVIRONMENTS[$value].logo;
+  .add("runtimeLogo", function($value, env) {
+    if(env && env.RUNTIMES && env.RUNTIMES[$value]) {
+      return env.RUNTIMES[$value].logo;
     }
 
     return '';
   })
-  .add("envVersion", function($value, env) {
-    if(env && env.ENVIRONMENTS && env.ENVIRONMENTS[$value]) {
-      return env.ENVIRONMENTS[$value].version;
+  .add("runtimeVersion", function($value, env) {
+    if(env && env.RUNTIMES && env.RUNTIMES[$value]) {
+      return env.RUNTIMES[$value].version;
     }
 
     return '';

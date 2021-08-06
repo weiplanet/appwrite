@@ -12,8 +12,6 @@ use Exception;
 use Utopia\Config\Config;
 use Utopia\Locale\Locale as Locale;
 
-use function PHPSTORM_META\map;
-
 class V06 extends Filter {
     
     // Convert 0.7 Data format to 0.6 format
@@ -21,7 +19,7 @@ class V06 extends Filter {
         
         $parsedResponse = [];
 
-        switch($model) {            
+        switch($model) {
 
             case Response::MODEL_DOCUMENT_LIST:
                 $parsedResponse = $content; 
@@ -108,11 +106,13 @@ class V06 extends Filter {
                 break;
 
             case Response::MODEL_ANY :
+            case Response::MODEL_DOCUMENT :
+            case Response::MODEL_PREFERENCES :
                 $parsedResponse = $content;
                 break;
 
             default:
-                throw new Exception('Recevied invalid model : '.$model);
+                throw new Exception('Received invalid model : '.$model);
         }
 
         return $parsedResponse;

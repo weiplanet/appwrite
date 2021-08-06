@@ -3,8 +3,6 @@
 require_once __DIR__.'/../vendor/autoload.php';
 
 use Appwrite\Database\Validator\Authorization;
-use Utopia\Swoole\Files;
-use Utopia\Swoole\Request;
 use Appwrite\Utopia\Response;
 use Swoole\Process;
 use Swoole\Http\Server;
@@ -12,14 +10,8 @@ use Swoole\Http\Request as SwooleRequest;
 use Swoole\Http\Response as SwooleResponse;
 use Utopia\App;
 use Utopia\CLI\Console;
-
-// xdebug_start_trace('/tmp/trace');
-
-ini_set('memory_limit','512M');
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-ini_set('default_socket_timeout', -1);
-error_reporting(E_ALL);
+use Utopia\Swoole\Files;
+use Utopia\Swoole\Request;
 
 $http = new Server("0.0.0.0", App::getEnv('PORT', 80));
 
@@ -33,6 +25,7 @@ $http
         'http_compression' => true,
         'http_compression_level' => 6,
         'package_max_length' => $payloadSize,
+        'buffer_output_size' => $payloadSize,
     ])
 ;
 
@@ -65,19 +58,7 @@ Files::load(__DIR__ . '/../public');
 
 include __DIR__ . '/controllers/general.php';
 
-$domain = App::getEnv('_APP_DOMAIN', '');
-
-Console::info('Issuing a TLS certificate for the master domain ('.$domain.') in 30 seconds.
-    Make sure your domain points to your server IP or restart your Appwrite server to try again.'); // TODO move this to installation script
-
-ResqueScheduler::enqueueAt(\time() + 30, 'v1-certificates', 'CertificatesV1', [
-    'document' => [],
-    'domain' => $domain,
-    'validateTarget' => false,
-    'validateCNAME' => false,
-]);
-
-$http->on('request', function (SwooleRequest $swooleRequest, SwooleResponse $swooleResponse) {
+$http->on('request', function (SwooleRequest $swooleRequest, SwooleResponse $swooleResponse) use ($register) {
     $request = new Request($swooleRequest);
     $response = new Response($swooleResponse);
 
@@ -95,6 +76,17 @@ $http->on('request', function (SwooleRequest $swooleRequest, SwooleResponse $swo
     }
 
     $app = new App('UTC');
+
+    $db = $register->get('dbPool')->get();
+    $redis = $register->get('redisPool')->get();
+
+    App::setResource('db', function () use (&$db) {
+        return $db;
+    });
+
+    App::setResource('cache', function () use (&$redis) {
+        return $redis;
+    });
     
     try {
         Authorization::cleanRoles();
@@ -107,12 +99,27 @@ $http->on('request', function (SwooleRequest $swooleRequest, SwooleResponse $swo
         Console::error('[Error] File: '.$th->getFile());
         Console::error('[Error] Line: '.$th->getLine());
 
+        /**
+         * Reset Database connection if PDOException was thrown.
+         */
+        if ($th instanceof PDOException) {
+            $db = null;
+        }
+
         if(App::isDevelopment()) {
             $swooleResponse->end('error: '.$th->getMessage());
         }
         else {
             $swooleResponse->end('500: Server Error');
         }
+    } finally {
+        /** @var PDOPool $dbPool */
+        $dbPool = $register->get('dbPool');
+        $dbPool->put($db);
+
+        /** @var RedisPool $redisPool */
+        $redisPool = $register->get('redisPool');
+        $redisPool->put($redis);
     }
 });
 
