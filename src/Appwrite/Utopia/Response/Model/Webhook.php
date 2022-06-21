@@ -58,25 +58,31 @@ class Webhook extends Model
                 'default' => '',
                 'example' => 'password',
             ])
+            ->addRule('signatureKey', [
+                'type' => self::TYPE_STRING,
+                'description' => 'Signature key which can be used to validated incoming',
+                'default' => '',
+                'example' => 'ad3d581ca230e2b7059c545e5a',
+            ])
         ;
     }
 
     /**
      * Get Name
-     * 
+     *
      * @return string
      */
-    public function getName():string
+    public function getName(): string
     {
         return 'Webhook';
     }
 
     /**
-     * Get Collection
-     * 
+     * Get Type
+     *
      * @return string
      */
-    public function getType():string
+    public function getType(): string
     {
         return Response::MODEL_WEBHOOK;
     }

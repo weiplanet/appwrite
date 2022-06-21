@@ -1,3 +1,61 @@
+## 5.0.1
+* Code formatting fix
+
+## 5.0.0
+* Support for Appwrite 0.14
+* **BREAKING** `account.delete()` -> `account.updateStatus()`
+* **BREAKING** Execution model `stdout` renamed to `response`
+* **BREAKING** Membership model `name` renamed to `userName` and `email` renamed to `userEmail`
+* Added `teamName` to Membership model
+* New `users.getMemberships` function
+
+## 4.0.2
+* Fix null issues with float attributes (https://github.com/appwrite/sdk-for-dart/issues/17 and https://github.com/appwrite/sdk-for-dart/issues/16)
+
+## 4.0.1
+* Fix InputFile filename param
+* Fix examples
+
+## 4.0.0
+* Support for Appwrite 0.13
+* **BREAKING** **Tags** have been renamed to **Deployments**
+* **BREAKING** `createFile` function expects Bucket ID as the first parameter
+* **BREAKING** `createDeployment` and `createFile` functions expect an instance **InputFile** rather than the instance of **MultipartFile**
+* **BREAKING** `list<Entity>` endpoints now contain a `total` attribute instead of `sum`
+* `onProgress()` callback function for endpoints supporting file uploads
+* Support for synchronous function executions
+* Bug fixes and Improvements
+
+**Full Changelog for Appwrite 0.13 can be found here**: https://github.com/appwrite/appwrite/blob/master/CHANGES.md#version-0130
+
+## 3.0.2
+- String Attribute Type got fixed
+
+## 3.0.1
+- Export Query Builder
+
+## 3.0.0
+- Support for Appwrite 0.12
+- **BREAKING** Updated database service to adapt 0.12 API 
+- **BREAKING** Custom ID support while creating resources
+- [View all the changes](https://github.com/appwrite/appwrite/blob/master/CHANGES.md#version-0120)
+
+## 2.0.0
+- BREAKING All services and methods now return structured response objects instead of `Response` object
+
+## 1.0.2
+- Support for Appwrite 0.11
+
+## 1.0.1
+- Export, separate IO and Browser clients for Flutter (Client and Realtime as well) and Dart (Client)
+
+## 1.0.0
+- Support for Appwrite 0.10
+- Refactored for better cross platform support
+- Exception implements `toString()` to get proper error message for unhandled exceptions
+- **Breaking** - Signature for `MultipartFile` has changed as we have dropped Dio in favor of [http](https://pub.dev/packages/http) package. [Here is the new signature for MultipartFile](https://pub.dev/documentation/http/latest/http/MultipartFile-class.html)
+- **Breaking** - Signature for `Response` has changed, now it only exposes the data.
+
 ## 0.7.0
 - Support for Appwrite 0.9
 - Breaking - removed order type enum, now you should pass string 'ASC' or 'DESC'

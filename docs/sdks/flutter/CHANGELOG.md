@@ -1,3 +1,78 @@
+## 5.0.0
+* Support for Appwrite 0.14
+* **BREAKING** `account.delete()` -> `account.updateStatus()`
+* **BREAKING** Execution model `stdout` renamed to `response`
+* **BREAKING** Membership model `name` renamed to `userName` and `email` renamed to `userEmail`
+* Added `teamName` to Membership model
+
+## 4.0.2
+* Upgrade dependencies
+
+## 4.0.1
+* Fix InputFile filename param
+* Fix examples
+
+## 4.0.0
+* Support for Appwrite 0.13
+* **BREAKING** **Tags** have been renamed to **Deployments**
+* **BREAKING** `createFile` function expects Bucket ID as the first parameter
+* **BREAKING** `createDeployment` and `createFile` functions expect an instance **InputFile** rather than the instance of **MultipartFile**
+* **BREAKING** `list<Entity>` endpoints now contain a `total` attribute instead of `sum`
+* `onProgress()` callback function for endpoints supporting file uploads
+* Support for synchronous function executions
+* Bug fixes and Improvements
+
+**Full Changelog for Appwrite 0.13 can be found here**: https://github.com/appwrite/appwrite/blob/master/CHANGES.md#version-0130
+
+## 3.0.1
+- Export Query Builder
+
+## 3.0.0
+- Support for Appwrite 0.12
+- **BREAKING** Updated database service to adapt 0.12 API 
+- **BREAKING** Custom ID support while creating resources
+- [View all the changes](https://github.com/appwrite/appwrite/blob/master/CHANGES.md#version-0120)
+
+## 2.1.0
+- Updated `flutter_we_auth` plugin now supports Flutter web for OAuth2 sessions [read more](https://github.com/appwrite/sdk-for-flutter/blob/master/README.md#web)
+- Added linters and updated codebase to match the rules
+
+## 2.0.3
+- Support for Appwrite 0.11
+- Fix comments on `sum` attributes
+
+## 2.0.2
+- Fix realtime not restarting when there was only one subscription and that was closed and reopened
+
+## 2.0.1
+- Fix realtime close and reconnect working only 1 out of two times due to future returning too early
+- Add dart doc comments to newly added response models
+
+## 2.0.0
+- BREAKING All services and methods now return proper response objects instead of `Response` object
+
+## 1.0.4
+- Fix user agent by using `packageName` instead of `appName`
+
+## 1.0.3
+- Upgrade `flutter_web_auth` to `0.3.1`
+
+## 1.0.2
+- Fix timestamp in Realtime Response to Integer
+
+## 1.0.1
+- Fix null pointer exception while creating OAuth2 session
+- Export RealtimeMessage
+- Export, separate IO and Browser clients for Flutter (Client and Realtime as well) and Dart (Client)
+
+## 1.0.0
+- Support for Appwrite 0.10
+- Refactored for better cross platform support
+- Exception implements `toString()` to get proper error message for unhandled exceptions
+- Introduces new Realtime service, [more on official docs](link-to-realtime-docs)
+- Breaking Signature for `MultipartFile` has changed as now we are using `http` package. [Here is the new signature for MultipartFile](https://pub.dev/documentation/http/latest/http/MultipartFile-class.html)
+- Breaking Signature for `Response` has changed, now it only exposes the `data`.
+
 ## 0.7.1
 - Fix - createOAuth2Session completing too early
 
@@ -84,7 +159,7 @@
 
 ## 0.2.2
 
-- Fixed an error that happend when the OAuth session creation request was sent before any other API call
+- Fixed an error that happened when the OAuth session creation request was sent before any other API call
 - Fixed a bug in the Avatars service where location URL generation had syntax error
 
 ## 0.2.1
@@ -94,7 +169,7 @@
 ## 0.2.0
 
 - Updated flutter_web_auth plugin to version 0.2.4
-- Added per project unique callback for OAuth2 redirects to aviod conflicts between multiple Appwrite projects
+- Added per project unique callback for OAuth2 redirects to avoid conflicts between multiple Appwrite projects
 
 ## 0.1.1
 
@@ -123,7 +198,7 @@
 
 ## 0.0.9
 
-- Updated deafult params
+- Updated default params
 
 ## 0.0.8
 

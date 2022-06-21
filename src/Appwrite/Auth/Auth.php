@@ -2,50 +2,46 @@
 
 namespace Appwrite\Auth;
 
-use Appwrite\Database\Document;
+use Utopia\Database\Document;
+use Utopia\Database\Validator\Authorization;
 
 class Auth
 {
     /**
-     * User Status.
-     */
-    const USER_STATUS_UNACTIVATED = 0;
-    const USER_STATUS_ACTIVATED = 1;
-    const USER_STATUS_BLOCKED = 2;
-
-    /**
      * User Roles.
      */
-    const USER_ROLE_GUEST = 'guest';
-    const USER_ROLE_MEMBER = 'member';
-    const USER_ROLE_ADMIN = 'admin';
-    const USER_ROLE_DEVELOPER = 'developer';
-    const USER_ROLE_OWNER = 'owner';
-    const USER_ROLE_APP = 'app';
-    const USER_ROLE_SYSTEM = 'system';
-    const USER_ROLE_ALL = '*';
+    public const USER_ROLE_ALL = 'all';
+    public const USER_ROLE_GUEST = 'guest';
+    public const USER_ROLE_MEMBER = 'member';
+    public const USER_ROLE_ADMIN = 'admin';
+    public const USER_ROLE_DEVELOPER = 'developer';
+    public const USER_ROLE_OWNER = 'owner';
+    public const USER_ROLE_APP = 'app';
+    public const USER_ROLE_SYSTEM = 'system';
 
     /**
      * Token Types.
      */
-    const TOKEN_TYPE_LOGIN = 1; // Deprecated
-    const TOKEN_TYPE_VERIFICATION = 2;
-    const TOKEN_TYPE_RECOVERY = 3;
-    const TOKEN_TYPE_INVITE = 4;
+    public const TOKEN_TYPE_LOGIN = 1; // Deprecated
+    public const TOKEN_TYPE_VERIFICATION = 2;
+    public const TOKEN_TYPE_RECOVERY = 3;
+    public const TOKEN_TYPE_INVITE = 4;
+    public const TOKEN_TYPE_MAGIC_URL = 5;
 
     /**
      * Session Providers.
      */
-    const SESSION_PROVIDER_EMAIL = 'email';
-    const SESSION_PROVIDER_ANONYMOUS = 'anonymous';
+    public const SESSION_PROVIDER_EMAIL = 'email';
+    public const SESSION_PROVIDER_ANONYMOUS = 'anonymous';
+    public const SESSION_PROVIDER_MAGIC_URL = 'magic-url';
 
     /**
      * Token Expiration times.
      */
-    const TOKEN_EXPIRATION_LOGIN_LONG = 31536000;      /* 1 year */
-    const TOKEN_EXPIRATION_LOGIN_SHORT = 3600;         /* 1 hour */
-    const TOKEN_EXPIRATION_RECOVERY = 3600;            /* 1 hour */
-    const TOKEN_EXPIRATION_CONFIRM = 3600 * 24 * 7;    /* 7 days */
+    public const TOKEN_EXPIRATION_LOGIN_LONG = 31536000;      /* 1 year */
+    public const TOKEN_EXPIRATION_LOGIN_SHORT = 3600;         /* 1 hour */
+    public const TOKEN_EXPIRATION_RECOVERY = 3600;            /* 1 hour */
+    public const TOKEN_EXPIRATION_CONFIRM = 3600 * 24 * 7;    /* 7 days */
 
     /**
      * @var string
@@ -167,7 +163,7 @@ class Auth
      *
      * @throws \Exception
      */
-    public static function passwordGenerator(int $length = 20):string
+    public static function passwordGenerator(int $length = 20): string
     {
         return \bin2hex(\random_bytes($length));
     }
@@ -183,7 +179,7 @@ class Auth
      *
      * @throws \Exception
      */
-    public static function tokenGenerator(int $length = 128):string
+    public static function tokenGenerator(int $length = 128): string
     {
         return \bin2hex(\random_bytes($length));
     }
@@ -200,12 +196,14 @@ class Auth
     public static function tokenVerify(array $tokens, int $type, string $secret)
     {
         foreach ($tokens as $token) { /** @var Document $token */
-            if ($token->isSet('type') &&
+            if (
+                $token->isSet('type') &&
                 $token->isSet('secret') &&
                 $token->isSet('expire') &&
                 $token->getAttribute('type') == $type &&
                 $token->getAttribute('secret') === self::hash($secret) &&
-                $token->getAttribute('expire') >= \time()) {
+                $token->getAttribute('expire') >= \time()
+            ) {
                 return (string)$token->getId();
             }
         }
@@ -224,11 +222,13 @@ class Auth
     public static function sessionVerify(array $sessions, string $secret)
     {
         foreach ($sessions as $session) { /** @var Document $session */
-            if ($session->isSet('secret') &&
+            if (
+                $session->isSet('secret') &&
                 $session->isSet('expire') &&
                 $session->isSet('provider') &&
                 $session->getAttribute('secret') === self::hash($secret) &&
-                $session->getAttribute('expire') >= \time()) {
+                $session->getAttribute('expire') >= \time()
+            ) {
                 return (string)$session->getId();
             }
         }
@@ -237,18 +237,18 @@ class Auth
     }
 
     /**
-     * Is Previligged User?
-     * 
+     * Is Privileged User?
+     *
      * @param array $roles
-     * 
+     *
      * @return bool
      */
     public static function isPrivilegedUser(array $roles): bool
     {
-        if(
-            array_key_exists('role:'.self::USER_ROLE_OWNER, $roles) ||
-            array_key_exists('role:'.self::USER_ROLE_DEVELOPER, $roles) ||
-            array_key_exists('role:'.self::USER_ROLE_ADMIN, $roles)
+        if (
+            in_array('role:' . self::USER_ROLE_OWNER, $roles) ||
+            in_array('role:' . self::USER_ROLE_DEVELOPER, $roles) ||
+            in_array('role:' . self::USER_ROLE_ADMIN, $roles)
         ) {
             return true;
         }
@@ -258,17 +258,49 @@ class Auth
 
     /**
      * Is App User?
-     * 
+     *
      * @param array $roles
-     * 
+     *
      * @return bool
      */
     public static function isAppUser(array $roles): bool
     {
-        if(array_key_exists('role:'.self::USER_ROLE_APP, $roles)) {
+        if (in_array('role:' . self::USER_ROLE_APP, $roles)) {
             return true;
         }
 
         return false;
+    }
+
+    /**
+     * Returns all roles for a user.
+     *
+     * @param Document $user
+     * @return array
+     */
+    public static function getRoles(Document $user): array
+    {
+        $roles = [];
+
+        if (!self::isPrivilegedUser(Authorization::getRoles()) && !self::isAppUser(Authorization::getRoles())) {
+            if ($user->getId()) {
+                $roles[] = 'user:' . $user->getId();
+                $roles[] = 'role:' . Auth::USER_ROLE_MEMBER;
+            } else {
+                return ['role:' . Auth::USER_ROLE_GUEST];
+            }
+        }
+
+        foreach ($user->getAttribute('memberships', []) as $node) {
+            if (isset($node['teamId']) && isset($node['roles'])) {
+                $roles[] = 'team:' . $node['teamId'];
+
+                foreach ($node['roles'] as $nodeRole) { // Set all team roles
+                    $roles[] = 'team:' . $node['teamId'] . '/' . $nodeRole;
+                }
+            }
+        }
+
+        return $roles;
     }
 }

@@ -39,7 +39,7 @@ a, .link {
 
 a.link-animation-enabled,
 .link.link-animation-enabled {
-  display: inline-block;
+  display: inline-flex;
   
   &:hover {
     transform: translateY(-2px);
@@ -93,6 +93,10 @@ small {
 
 .text-size-small {
   font-size: 13px;
+}
+
+.text-size-smaller {
+  font-size: 11.5px;
 }
 
 .text-size-xs {
@@ -152,6 +156,10 @@ small {
 
 .text-fade {
   color: var(--config-color-fade);
+}
+
+.text-fade-dark {
+  color: var(--config-color-fade-dark);
 }
 
 &.text-green {
@@ -225,12 +233,6 @@ small {
 .text-dir-rtl {
   direction: rtl;
   display: inline-block;
-}
-
-// Icon Hacks
-
-.icon-dot-3:before {
-  .func-rotate(90deg);
 }
 
 // fix icons vertical alignment

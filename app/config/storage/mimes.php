@@ -10,13 +10,28 @@ return [
     // Video Files
     'video/mp4',
     'video/x-flv',
+    'video/webm',
     'application/x-mpegURL',
     'video/MP2T',
     'video/3gpp',
     'video/quicktime',
     'video/x-msvideo',
     'video/x-ms-wmv',
-    
+
+    // Audio Files
+
+    'audio/basic', // au snd RFC 2046
+    'auido/L24', // Linear PCM RFC 3190
+    'audio/mid', // mid rmi
+    'audio/mpeg', // mp3 RFC 3003
+    'audio/mp4', // mp4 audio
+    'audio/x-aiff', // aif aifc aiff
+    'audio/x-mpegurl', // m3u
+    'audio/vnd.rn-realaudio', // ra ram
+    'audio/ogg', // Ogg Vorbis RFC 5334
+    'audio/vorbis', // Vorbis RFC 5215
+    'audio/vnd.wav', // wav RFC 2361
+
     // Microsoft Word
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
