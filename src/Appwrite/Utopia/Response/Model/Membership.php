@@ -16,6 +16,18 @@ class Membership extends Model
                 'default' => '',
                 'example' => '5e5ea5c16897e',
             ])
+            ->addRule('$createdAt', [
+                'type' => self::TYPE_DATETIME,
+                'description' => 'Membership creation date in ISO 8601 format.',
+                'default' => '',
+                'example' => self::TYPE_DATETIME_EXAMPLE,
+            ])
+            ->addRule('$updatedAt', [
+                'type' => self::TYPE_DATETIME,
+                'description' => 'Membership update date in ISO 8601 format.',
+                'default' => '',
+                'example' => self::TYPE_DATETIME_EXAMPLE,
+            ])
             ->addRule('userId', [
                 'type' => self::TYPE_STRING,
                 'description' => 'User ID.',
@@ -47,16 +59,16 @@ class Membership extends Model
                 'example' => 'VIP',
             ])
             ->addRule('invited', [
-                'type' => self::TYPE_INTEGER,
-                'description' => 'Date, the user has been invited to join the team in Unix timestamp.',
-                'default' => 0,
-                'example' => 1592981250,
+                'type' => self::TYPE_DATETIME,
+                'description' => 'Date, the user has been invited to join the team in ISO 8601 format.',
+                'default' => '',
+                'example' => self::TYPE_DATETIME_EXAMPLE,
             ])
             ->addRule('joined', [
-                'type' => self::TYPE_INTEGER,
-                'description' => 'Date, the user has accepted the invitation to join the team in Unix timestamp.',
-                'default' => 0,
-                'example' => 1592981250,
+                'type' => self::TYPE_DATETIME,
+                'description' => 'Date, the user has accepted the invitation to join the team in ISO 8601 format.',
+                'default' => '',
+                'example' => self::TYPE_DATETIME_EXAMPLE,
             ])
             ->addRule('confirm', [
                 'type' => self::TYPE_BOOLEAN,
@@ -64,11 +76,17 @@ class Membership extends Model
                 'default' => false,
                 'example' => false,
             ])
+            ->addRule('mfa', [
+                'type' => self::TYPE_BOOLEAN,
+                'description' => 'Multi factor authentication status, true if the user has MFA enabled or false otherwise.',
+                'default' => false,
+                'example' => false,
+            ])
             ->addRule('roles', [
                 'type' => self::TYPE_STRING,
                 'description' => 'User list of roles',
                 'default' => [],
-                'example' => 'admin',
+                'example' => ['owner'],
                 'array' => true,
             ])
         ;

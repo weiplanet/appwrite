@@ -10,7 +10,7 @@ class Key extends Model
     /**
      * @var bool
      */
-    protected $public = false;
+    protected bool $public = false;
 
     public function __construct()
     {
@@ -21,11 +21,29 @@ class Key extends Model
                 'default' => '',
                 'example' => '5e5ea5c16897e',
             ])
+            ->addRule('$createdAt', [
+                'type' => self::TYPE_DATETIME,
+                'description' => 'Key creation date in ISO 8601 format.',
+                'default' => '',
+                'example' => self::TYPE_DATETIME_EXAMPLE,
+            ])
+            ->addRule('$updatedAt', [
+                'type' => self::TYPE_DATETIME,
+                'description' => 'Key update date in ISO 8601 format.',
+                'default' => '',
+                'example' => self::TYPE_DATETIME_EXAMPLE,
+            ])
             ->addRule('name', [
                 'type' => self::TYPE_STRING,
                 'description' => 'Key name.',
                 'default' => '',
                 'example' => 'My API Key',
+            ])
+            ->addRule('expire', [
+                'type' => self::TYPE_DATETIME,
+                'description' => 'Key expiration date in ISO 8601 format.',
+                'default' => '',
+                'example' => self::TYPE_DATETIME_EXAMPLE,
             ])
             ->addRule('scopes', [
                 'type' => self::TYPE_STRING,
@@ -39,6 +57,19 @@ class Key extends Model
                 'description' => 'Secret key.',
                 'default' => '',
                 'example' => '919c2d18fb5d4...a2ae413da83346ad2',
+            ])
+            ->addRule('accessedAt', [
+                'type' => self::TYPE_DATETIME,
+                'description' => 'Most recent access date in ISO 8601 format. This attribute is only updated again after ' . APP_KEY_ACCCESS / 60 / 60 . ' hours.',
+                'default' => '',
+                'example' => self::TYPE_DATETIME_EXAMPLE
+            ])
+            ->addRule('sdks', [
+                'type' => self::TYPE_STRING,
+                'description' => 'List of SDK user agents that used this key.',
+                'default' => null,
+                'example' => 'appwrite:flutter',
+                'array' => true
             ])
         ;
     }

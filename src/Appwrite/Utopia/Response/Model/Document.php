@@ -36,32 +36,55 @@ class Document extends Any
                 'default' => '',
                 'example' => '5e5ea5c16897e',
             ])
-            ->addRule('$collection', [
+            ->addRule('$collectionId', [
                 'type' => self::TYPE_STRING,
                 'description' => 'Collection ID.',
                 'default' => '',
                 'example' => '5e5ea5c15117e',
             ])
-            ->addRule('$read', [
+            ->addRule('$databaseId', [
                 'type' => self::TYPE_STRING,
-                'description' => 'Document read permissions.',
+                'description' => 'Database ID.',
                 'default' => '',
-                'example' => 'role:all',
-                'array' => true,
+                'example' => '5e5ea5c15117e',
             ])
-            ->addRule('$write', [
+            ->addRule('$createdAt', [
+                'type' => self::TYPE_DATETIME,
+                'description' => 'Document creation date in ISO 8601 format.',
+                'default' => '',
+                'example' => self::TYPE_DATETIME_EXAMPLE,
+            ])
+            ->addRule('$updatedAt', [
+                'type' => self::TYPE_DATETIME,
+                'description' => 'Document update date in ISO 8601 format.',
+                'default' => '',
+                'example' => self::TYPE_DATETIME_EXAMPLE,
+            ])
+            ->addRule('$permissions', [
                 'type' => self::TYPE_STRING,
-                'description' => 'Document write permissions.',
+                'description' => 'Document permissions. [Learn more about permissions](https://appwrite.io/docs/permissions).',
                 'default' => '',
-                'example' => 'user:608f9da25e7e1',
+                'example' => ['read("any")'],
                 'array' => true,
-            ])
-        ;
+            ]);
     }
 
     public function filter(DatabaseDocument $document): DatabaseDocument
     {
         $document->removeAttribute('$internalId');
+        $document->removeAttribute('$collection'); // $collection is the internal collection ID
+
+        foreach ($document->getAttributes() as $attribute) {
+            if (\is_array($attribute)) {
+                foreach ($attribute as $subAttribute) {
+                    if ($subAttribute instanceof DatabaseDocument) {
+                        $this->filter($subAttribute);
+                    }
+                }
+            } elseif ($attribute instanceof DatabaseDocument) {
+                $this->filter($attribute);
+            }
+        }
 
         return $document;
     }

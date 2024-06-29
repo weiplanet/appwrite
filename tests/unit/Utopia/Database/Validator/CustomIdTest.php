@@ -1,16 +1,13 @@
 <?php
 
-namespace Appwrite\Tests;
+namespace Tests\Unit\Utopia\Database\Validator;
 
 use Appwrite\Utopia\Database\Validator\CustomId;
 use PHPUnit\Framework\TestCase;
 
 class CustomIdTest extends TestCase
 {
-    /**
-     * @var Key
-     */
-    protected $object = null;
+    protected ?CustomId $object = null;
 
     public function setUp(): void
     {
@@ -21,7 +18,7 @@ class CustomIdTest extends TestCase
     {
     }
 
-    public function testValues()
+    public function testValues(): void
     {
         $this->assertEquals($this->object->isValid('unique()'), true);
         $this->assertEquals($this->object->isValid('unique)'), false);

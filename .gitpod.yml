@@ -1,12 +1,14 @@
 tasks:
   - name: Run Appwrite Docker Stack
     init: |
-      docker compose pull
+      git submodule update --init
       docker compose build
+      docker compose pull
+      docker pull composer
     command: |
       docker run --rm --interactive --tty \
       --volume $PWD:/app \
-      composer update \
+      composer install \
       --ignore-platform-reqs \
       --optimize-autoloader \
       --no-plugins \
@@ -15,12 +17,12 @@ tasks:
 
 ports:
   - port: 8080
-    onOpen: open-preview
     visibility: public
 
 vscode:
   extensions:
     - ms-azuretools.vscode-docker
+    - zobo.php-intellisense
 
 github:
   # https://www.gitpod.io/docs/prebuilds#github-specific-configuration

@@ -36,8 +36,26 @@ return [
             ],
             [
                 'name' => '_APP_OPTIONS_FORCE_HTTPS',
-                'description' => 'Allows you to force HTTPS connection to your API. This feature redirects any HTTP call to HTTPS and adds the \'Strict-Transport-Security\' header to all HTTP responses. By default, set to \'enabled\'. To disable, set to \'disabled\'. This feature will work only when your ports are set to default 80 and 443.',
+                'description' => 'Allows you to force HTTPS connection to your API. This feature redirects any HTTP call to HTTPS and adds the \'Strict-Transport-Security\' header to all HTTP responses. By default, set to \'enabled\'. To disable, set to \'disabled\'. This feature will work only when your ports are set to default 80 and 443, and you have set up wildcard certificates with DNS challenge.',
                 'introduction' => '',
+                'default' => 'disabled',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+            [
+                'name' => '_APP_OPTIONS_FUNCTIONS_FORCE_HTTPS',
+                'description' => 'Allows you to force HTTPS connection to function domains. This feature redirects any HTTP call to HTTPS and adds the \'Strict-Transport-Security\' header to all HTTP responses. By default, set to \'enabled\'. To disable, set to \'disabled\'. This feature will work only when your ports are set to default 80 and 443.',
+                'introduction' => '',
+                'default' => 'disabled',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+            [
+                'name' => '_APP_OPTIONS_ROUTER_PROTECTION',
+                'description' => 'Protects server from serving requests from unknown hostnames, and from serving Console for custom project domains. By default, set to \'disabled\'. To start router protection, set to \'enabled\'. It is recommended to enable this variable on production environment.',
+                'introduction' => '1.4.4',
                 'default' => 'disabled',
                 'required' => false,
                 'question' => '',
@@ -62,13 +80,22 @@ return [
                 'filter' => ''
             ],
             [
+                'name' => '_APP_DOMAIN_FUNCTIONS',
+                'description' => 'A domain to use for function preview URLs. Setting to empty turns off function preview URLs.',
+                'introduction' => '',
+                'default' => 'functions.localhost',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+            [
                 'name' => '_APP_DOMAIN_TARGET',
                 'description' => 'A DNS A record hostname to serve as a CNAME target for your Appwrite custom domains. You can use the same value as used for the Appwrite \'_APP_DOMAIN\' variable. The default value is \'localhost\'.',
                 'introduction' => '',
                 'default' => 'localhost',
                 'required' => true,
                 'question' => 'Enter a DNS A record hostname to serve as a CNAME for your custom domains.' . PHP_EOL . 'You can use the same value as used for the Appwrite hostname.',
-                'filter' => ''
+                'filter' => 'domainTarget'
             ],
             [
                 'name' => '_APP_CONSOLE_WHITELIST_ROOT',
@@ -88,18 +115,19 @@ return [
                 'question' => '',
                 'filter' => ''
             ],
-            // [
-            //     'name' => '_APP_CONSOLE_WHITELIST_DOMAINS',
-            //     'description' => 'This option allows you to limit creation of users to Appwrite console for users sharing the same email domains. This option is very useful for team working with company emails domain.\n\nTo enable this option, pass a list of allowed email domains separated by a comma.',
-            //     'introduction' => '',
-            //     'default' => '',
-            //     'required' => false,
-            //     'question' => '',
-            // ],
             [
                 'name' => '_APP_CONSOLE_WHITELIST_IPS',
-                'description' => 'This last option allows you to limit creation of users in Appwrite console for users sharing the same set of IP addresses. This option is very useful for team working with a VPN service or a company IP.\n\nTo enable/activate this option, pass a list of allowed IP addresses separated by a comma.',
+                'description' => "This last option allows you to limit creation of users in Appwrite console for users sharing the same set of IP addresses. This option is very useful for team working with a VPN service or a company IP.\n\nTo enable/activate this option, pass a list of allowed IP addresses separated by a comma.",
                 'introduction' => '',
+                'default' => '',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+            [
+                'name' => '_APP_CONSOLE_HOSTNAMES',
+                'description' => 'This option allows you to add additional hostnames to your Appwrite console. This option is very useful for allowing access to the console project from additional domains. To enable it, pass a list of allowed hostnames separated by a comma.',
+                'introduction' => '1.5.0',
                 'default' => '',
                 'required' => false,
                 'question' => '',
@@ -134,7 +162,7 @@ return [
             ],
             [
                 'name' => '_APP_SYSTEM_SECURITY_EMAIL_ADDRESS',
-                'description' => 'This is the email address used to issue SSL certificates for custom domains or the user agent in your webhooks payload.',
+                'description' => 'Deprecated since 1.5.1 use _APP_EMAIL_SECURITY and _APP_EMAIL_CERTIFICATES instead',
                 'introduction' => '0.7.0',
                 'default' => 'certs@appwrite.io',
                 'required' => false,
@@ -142,8 +170,26 @@ return [
                 'filter' => ''
             ],
             [
+                'name' => '_APP_EMAIL_SECURITY',
+                'description' => 'This is the email address used as the user agent in your webhooks payload.',
+                'introduction' => '1.5.1',
+                'default' => '',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+            [
+                'name' => '_APP_EMAIL_CERTIFICATES',
+                'description' => 'This is the email address used to issue SSL certificates for custom domains',
+                'introduction' => '1.5.1',
+                'default' => '',
+                'required' => true,
+                'question' => '',
+                'filter' => ''
+            ],
+            [
                 'name' => '_APP_USAGE_STATS',
-                'description' => 'This variable allows you to disable the collection and displaying of usage stats. This value is set to \'enabled\' by default, to disable the usage stats set the value to \'disabled\'. When disabled, it\'s recommended to turn off the Worker Usage, Influxdb and Telegraf containers for better resource usage.',
+                'description' => 'This variable allows you to disable the collection and displaying of usage stats. This value is set to \'enabled\' by default, to disable the usage stats set the value to \'disabled\'. When disabled, it\'s recommended to turn off the Worker Usage container to reduce resource usage.',
                 'introduction' => '0.7.0',
                 'default' => 'enabled',
                 'required' => false,
@@ -152,7 +198,7 @@ return [
             ],
             [
                 'name' => '_APP_LOGGING_PROVIDER',
-                'description' => 'This variable allows you to enable logging errors to 3rd party providers. This value is empty by default, to enable the logger set the value to one of \'sentry\', \'raygun\', \'appsignal\', \'logowl\'',
+                'description' => 'This variable allows you to enable logging errors to 3rd party providers. This value is empty by default, set the value to one of \'sentry\', \'raygun\', \'appSignal\', \'logOwl\' to enable the logger.',
                 'introduction' => '0.12.0',
                 'default' => '',
                 'required' => false,
@@ -170,9 +216,27 @@ return [
             ],
             [
                 'name' => '_APP_USAGE_AGGREGATION_INTERVAL',
-                'description' => 'Interval value containing the number of seconds that the Appwrite usage process should wait before aggregating stats and syncing it to mariadb from InfluxDB. The default value is 30 seconds.',
-                'introduction' => '0.10.0',
+                'description' => 'Interval value containing the number of seconds that the Appwrite usage process should wait before aggregating stats and syncing it to Database from TimeSeries data. The default value is 30 seconds. Reintroduced in 1.1.0.',
+                'introduction' => '1.1.0',
                 'default' => '30',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+            [
+                'name' => '_APP_USAGE_TIMESERIES_INTERVAL',
+                'description' => 'Deprecated since 1.1.0 use _APP_USAGE_AGGREGATION_INTERVAL instead.',
+                'introduction' => '1.0.0',
+                'default' => '30',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+            [
+                'name' => '_APP_USAGE_DATABASE_INTERVAL',
+                'description' => 'Deprecated since 1.1.0 use _APP_USAGE_AGGREGATION_INTERVAL instead.',
+                'introduction' => '1.0.0',
+                'default' => '900',
                 'required' => false,
                 'question' => '',
                 'filter' => ''
@@ -185,7 +249,7 @@ return [
                 'required' => false,
                 'question' => '',
                 'filter' => ''
-            ]
+            ],
         ],
     ],
     [
@@ -292,7 +356,7 @@ return [
     ],
     [
         'category' => 'InfluxDB',
-        'description' => 'Appwrite uses an InfluxDB server for managing time-series data and server stats. The InfluxDB env vars are used to allow Appwrite server to connect to the InfluxDB container.',
+        'description' => 'Deprecated since 1.4.8.',
         'variables' => [
             [
                 'name' => '_APP_INFLUXDB_HOST',
@@ -316,7 +380,7 @@ return [
     ],
     [
         'category' => 'StatsD',
-        'description' => 'Appwrite uses a StatsD server for aggregating and sending stats data over a fast UDP connection. The StatsD env vars are used to allow Appwrite server to connect to the StatsD container.',
+        'description' => 'Deprecated since 1.4.8.',
         'variables' => [
             [
                 'name' => '_APP_STATSD_HOST',
@@ -340,7 +404,7 @@ return [
     ],
     [
         'category' => 'SMTP',
-        'description' => 'Appwrite is using an SMTP server for emailing your projects users and server admins. The SMTP env vars are used to allow Appwrite server to connect to the SMTP container.\n\nIf running in production, it might be easier to use a 3rd party SMTP server as it might be a little more difficult to set up a production SMTP server that will not send all your emails into your user\'s SPAM folder.',
+        'description' => "Appwrite is using an SMTP server for emailing your projects users and server admins. The SMTP env vars are used to allow Appwrite server to connect to the SMTP container.\n\nIf running in production, it might be easier to use a 3rd party SMTP server as it might be a little more difficult to set up a production SMTP server that will not send all your emails into your user\'s SPAM folder.",
         'variables' => [
             [
                 'name' => '_APP_SMTP_HOST',
@@ -362,7 +426,7 @@ return [
             ],
             [
                 'name' => '_APP_SMTP_SECURE',
-                'description' => 'SMTP secure connection protocol. Empty by default, change to \'tls\' if running on a secure connection.',
+                'description' => 'SMTP secure connection protocol. Empty by default, change to \'tls\' or \'ssl\' if running on a secure connection.',
                 'introduction' => '',
                 'default' => '',
                 'required' => false,
@@ -382,6 +446,30 @@ return [
                 'name' => '_APP_SMTP_PASSWORD',
                 'description' => 'SMTP server user password. Empty by default.',
                 'introduction' => '',
+                'default' => '',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+        ],
+    ],
+    [
+        'category' => 'Phone',
+        'description' => '',
+        'variables' => [
+            [
+                'name' => '_APP_SMS_PROVIDER',
+                'description' => "Provider used for delivering SMS for Phone authentication. Use the following format: 'sms://[USER]:[SECRET]@[PROVIDER]'.\n\nEnsure `[USER]` and `[SECRET]` are URL encoded if they contain any non-alphanumeric characters.\n\nAvailable providers are twilio, Textmagic, telesign, msg91, and vonage.",
+                'introduction' => '0.15.0',
+                'default' => '',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+            [
+                'name' => '_APP_SMS_FROM',
+                'description' => 'Phone number used for sending out messages. Must start with a leading \'+\' and maximum of 15 digits without spaces (+123456789).',
+                'introduction' => '0.15.0',
                 'default' => '',
                 'required' => false,
                 'question' => '',
@@ -440,9 +528,9 @@ return [
             ],
             [
                 'name' => '_APP_STORAGE_DEVICE',
-                'description' => 'Select default storage device. The default value is \'Local\'. List of supported adapters are \'Local\', \'S3\', \'DOSpaces\', \'Backblaze\', \'Linode\' and \'Wasabi\'.',
+                'description' => 'Select default storage device. The default value is \'local\'. List of supported adapters are \'local\', \'s3\', \'dospaces\', \'backblaze\', \'linode\' and \'wasabi\'.',
                 'introduction' => '0.13.0',
-                'default' => 'Local',
+                'default' => 'local',
                 'required' => false,
                 'question' => '',
             ],
@@ -623,7 +711,7 @@ return [
             ],
             [
                 'name' => '_APP_FUNCTIONS_TIMEOUT',
-                'description' => 'The maximum number of seconds allowed as a timeout value when creating a new function. The default value is 900 seconds.',
+                'description' => 'The maximum number of seconds allowed as a timeout value when creating a new function. The default value is 900 seconds. This is the global limit, timeout for individual functions are configured in the function\'s settings or in appwrite.json.',
                 'introduction' => '0.7.0',
                 'default' => '900',
                 'required' => false,
@@ -641,7 +729,7 @@ return [
             ],
             [
                 'name' => '_APP_FUNCTIONS_CONTAINERS',
-                'description' => 'The maximum number of containers Appwrite is allowed to keep alive in the background for function environments. Running containers allow faster execution time as there is no need to recreate each container every time a function gets executed. The default value is 10.',
+                'description' => 'Deprecated since 1.2.0. Runtimes now timeout by inactivity using \'_APP_FUNCTIONS_INACTIVE_THRESHOLD\'.',
                 'introduction' => '0.7.0',
                 'default' => '10',
                 'required' => false,
@@ -668,7 +756,7 @@ return [
             ],
             [
                 'name' => '_APP_FUNCTIONS_MEMORY_SWAP',
-                'description' => 'The maximum amount of swap memory a single cloud function is allowed to use in megabytes. The default value is  empty. When it\'s empty, swap memory limit will be disabled.',
+                'description' => 'Deprecated since 1.2.0. High use of swap memory is not recommended to preserve harddrive health.',
                 'introduction' => '0.7.0',
                 'default' => '0',
                 'required' => false,
@@ -677,7 +765,7 @@ return [
             ],
             [
                 'name' => '_APP_FUNCTIONS_RUNTIMES',
-                'description' => "This option allows you to limit the available environments for cloud functions. This option is very useful for low-cost servers to safe disk space.\n\nTo enable/activate this option, pass a list of allowed environments separated by a comma.\n\nCurrently, supported environments are: " . \implode(', ', \array_keys(Config::getParam('runtimes'))),
+                'description' => "This option allows you to enable or disable runtime environments for cloud functions. Disable unused runtimes to save disk space.\n\nTo enable cloud function runtimes, pass a list of enabled environments separated by a comma.\n\nCurrently, supported environments are: " . \implode(', ', \array_keys(Config::getParam('runtimes'))),
                 'introduction' => '0.8.0',
                 'default' => 'node-16.0,php-8.0,python-3.9,ruby-3.0',
                 'required' => false,
@@ -686,7 +774,7 @@ return [
             ],
             [
                 'name' => '_APP_EXECUTOR_SECRET',
-                'description' => 'The secret key used by Appwrite to communicate with the function executor. Make sure to change this!',
+                'description' => 'The secret key used by Appwrite to communicate with the function executor. Make sure to change this.',
                 'introduction' => '0.13.0',
                 'default' => 'your-secret-key',
                 'required' => false,
@@ -695,16 +783,17 @@ return [
             ],
             [
                 'name' => '_APP_EXECUTOR_HOST',
-                'description' => 'The host used by Appwrite to communicate with the function executor!',
+                'description' => 'The host used by Appwrite to communicate with the function executor.',
                 'introduction' => '0.13.0',
-                'default' => 'http://appwrite-executor/v1',
+                'default' => 'http://exc1/v1',
                 'required' => false,
+                'overwrite' => true,
                 'question' => '',
                 'filter' => ''
             ],
             [
                 'name' => '_APP_EXECUTOR_RUNTIME_NETWORK',
-                'description' => 'Deprecated with 0.14.0, use \'OPEN_RUNTIMES_NETWORK\' instead!',
+                'description' => 'Deprecated with 0.14.0, use \'OPEN_RUNTIMES_NETWORK\' instead.',
                 'introduction' => '0.13.0',
                 'default' => 'appwrite_runtimes',
                 'required' => false,
@@ -713,7 +802,7 @@ return [
             ],
             [
                 'name' => '_APP_FUNCTIONS_ENVS',
-                'description' => 'Deprecated with 0.8.0, use \'_APP_FUNCTIONS_RUNTIMES\' instead!',
+                'description' => 'Deprecated with 0.8.0, use \'_APP_FUNCTIONS_RUNTIMES\' instead.',
                 'introduction' => '0.7.0',
                 'default' => 'node-16.0,php-7.4,python-3.9,ruby-3.0',
                 'required' => false,
@@ -722,7 +811,7 @@ return [
             ],
             [
                 'name' => '_APP_FUNCTIONS_INACTIVE_THRESHOLD',
-                'description' => 'The minimum time a function can be inactive before it\'s container is shutdown and put to sleep. The default value is 60 seconds',
+                'description' => 'The minimum time a function must be inactive before it can be shut down and cleaned up. This feature is intended to clean up unused containers. Containers may remain active for longer than the interval before being shut down, as Appwrite only cleans up unused containers every hour. If no value is provided, the default is 60 seconds.',
                 'introduction' => '0.13.0',
                 'default' => '60',
                 'required' => false,
@@ -731,7 +820,7 @@ return [
             ],
             [
                 'name' => 'DOCKERHUB_PULL_USERNAME',
-                'description' => 'The username for hub.docker.com. This variable is used to pull images from hub.docker.com.',
+                'description' => 'Deprecated with 1.2.0, use \'_APP_DOCKER_HUB_USERNAME\' instead.',
                 'introduction' => '0.10.0',
                 'default' => '',
                 'required' => false,
@@ -740,7 +829,7 @@ return [
             ],
             [
                 'name' => 'DOCKERHUB_PULL_PASSWORD',
-                'description' => 'The password for hub.docker.com. This variable is used to pull images from hub.docker.com.',
+                'description' => 'Deprecated with 1.2.0, use \'_APP_DOCKER_HUB_PASSWORD\' instead.',
                 'introduction' => '0.10.0',
                 'default' => '',
                 'required' => false,
@@ -749,7 +838,7 @@ return [
             ],
             [
                 'name' => 'DOCKERHUB_PULL_EMAIL',
-                'description' => 'The email for hub.docker.com. This variable is used to pull images from hub.docker.com.',
+                'description' => 'Deprecated since 1.2.0. Email is no longer needed.',
                 'introduction' => '0.10.0',
                 'default' => '',
                 'required' => false,
@@ -758,9 +847,106 @@ return [
             ],
             [
                 'name' => 'OPEN_RUNTIMES_NETWORK',
-                'description' => 'The docker network used for communication between the executor and runtimes. Change this if you have altered the default network names.',
+                'description' => 'Deprecated with 1.2.0, use \'_APP_FUNCTIONS_RUNTIMES_NETWORK\' instead.',
                 'introduction' => '0.13.0',
                 'default' => 'appwrite_runtimes',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+            [
+                'name' => '_APP_FUNCTIONS_RUNTIMES_NETWORK',
+                'description' => 'The docker network used for communication between the executor and runtimes.',
+                'introduction' => '1.2.0',
+                'default' => 'runtimes',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+            [
+                'name' => '_APP_DOCKER_HUB_USERNAME',
+                'description' => 'The username for hub.docker.com. This variable is used to pull images from hub.docker.com.',
+                'introduction' => '1.2.0',
+                'default' => '',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+            [
+                'name' => '_APP_DOCKER_HUB_PASSWORD',
+                'description' => 'The password for hub.docker.com. This variable is used to pull images from hub.docker.com.',
+                'introduction' => '1.2.0',
+                'default' => '',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+            [
+                'name' => '_APP_FUNCTIONS_MAINTENANCE_INTERVAL',
+                'description' => 'Interval value containing the number of seconds that the executor should wait before checking for inactive runtimes. The default value is 3600 seconds (1 hour).',
+                'introduction' => '1.4.0',
+                'default' => '3600',
+                'required' => false,
+                'overwrite' => true,
+                'question' => '',
+                'filter' => ''
+            ],
+        ],
+    ],
+    [
+        'category' => 'VCS (Version Control System)',
+        'description' => '',
+        'variables' => [
+            [
+                'name' => '_APP_VCS_GITHUB_APP_NAME',
+                'description' => 'Name of your GitHub app. This value should be set to your GitHub application\'s URL.',
+                'introduction' => '1.4.0',
+                'default' => '',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+            [
+                'name' => '_APP_VCS_GITHUB_PRIVATE_KEY',
+                'description' => 'GitHub app RSA private key. You can generate private keys from GitHub application settings.',
+                'introduction' => '1.4.0',
+                'default' => '',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+            [
+                'name' => '_APP_VCS_GITHUB_APP_ID',
+                'description' => 'GitHub application ID. You can find it in your GitHub application details.',
+                'introduction' => '1.4.0',
+                'default' => '',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+            [
+                'name' => '_APP_VCS_GITHUB_CLIENT_ID',
+                'description' => 'GitHub client ID. You can find it in your GitHub application details.',
+                'introduction' => '1.4.0',
+                'default' => '',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+            [
+                'name' => '_APP_VCS_GITHUB_CLIENT_SECRET',
+                'description' => 'GitHub client secret. You can generate secrets in your GitHub application settings.',
+                'introduction' => '1.4.0',
+                'default' => '',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+            [
+                'name' => '_APP_VCS_GITHUB_WEBHOOK_SECRET',
+                'description' => 'GitHub webhook secret. You can configure it in your GitHub application settings under webhook section.',
+                'introduction' => '1.4.0',
+                'default' => '',
                 'required' => false,
                 'question' => '',
                 'filter' => ''
@@ -776,6 +962,24 @@ return [
                 'description' => 'Interval value containing the number of seconds that the Appwrite maintenance process should wait before executing system cleanups and optimizations. The default value is 86400 seconds (1 day).',
                 'introduction' => '0.7.0',
                 'default' => '86400',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+            [
+                'name' => '_APP_MAINTENANCE_DELAY',
+                'description' => 'Delay value containing the number of seconds that the Appwrite maintenance process should wait before executing system cleanups and optimizations. The default value is 0 seconds.',
+                'introduction' => '1.5.0',
+                'default' => '0',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+            [
+                'name' => '_APP_MAINTENANCE_RETENTION_CACHE',
+                'description' => 'The maximum duration (in seconds) upto which to retain cached files. The default value is 2592000 seconds (30 days).',
+                'introduction' => '1.0.0',
+                'default' => '2592000',
                 'required' => false,
                 'question' => '',
                 'filter' => ''
@@ -806,7 +1010,97 @@ return [
                 'required' => false,
                 'question' => '',
                 'filter' => ''
+            ],
+            [
+                'name' => '_APP_MAINTENANCE_RETENTION_USAGE_HOURLY',
+                'description' => 'The maximum duration (in seconds) upto which to retain hourly usage metrics. The default value is 8640000 seconds (100 days).',
+                'introduction' => '',
+                'default' => '8640000',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+            [
+                'name' => '_APP_MAINTENANCE_RETENTION_SCHEDULES',
+                'description' => 'Schedules deletion interval ( in seconds ) ',
+                'introduction' => 'TBD',
+                'default' => '86400',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
             ]
         ],
     ],
+    [
+        'category' => 'GraphQL',
+        'description' => '',
+        'variables' => [
+            [
+                'name' => '_APP_GRAPHQL_MAX_BATCH_SIZE',
+                'description' => 'Maximum number of batched queries per request. The default value is 10.',
+                'introduction' => '1.2.0',
+                'default' => '10',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+            [
+                'name' => '_APP_GRAPHQL_MAX_COMPLEXITY',
+                'description' => 'Maximum complexity of a GraphQL query. One field adds one to query complexity. Lists multiply the complexity by the number of items requested. The default value is 250.',
+                'introduction' => '1.2.0',
+                'default' => '250',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+            [
+                'name' => '_APP_GRAPHQL_MAX_DEPTH',
+                'description' => 'Maximum depth of a GraphQL query. One nested field level adds one to query depth. The default value is 3.',
+                'introduction' => '1.2.0',
+                'default' => '3',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+        ],
+    ],
+    [
+        'category' => 'Migrations',
+        'description' => '',
+        'variables' => [
+            [
+                'name' => '_APP_MIGRATIONS_FIREBASE_CLIENT_ID',
+                'description' => 'Google OAuth client ID. You can find it in your GCP application settings.',
+                'introduction' => '1.4.0',
+                'default' => '',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ],
+            [
+                'name' => '_APP_MIGRATIONS_FIREBASE_CLIENT_SECRET',
+                'description' => 'Google OAuth client secret. You can generate secrets in your GCP application settings.',
+                'introduction' => '1.4.0',
+                'default' => '',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ]
+        ]
+    ],
+    [
+        'category' => 'Assistant',
+        'description' => '',
+        'variables' => [
+            [
+                'name' => '_APP_ASSISTANT_OPENAI_API_KEY',
+                'description' => 'OpenAI API key. You can find it in your OpenAI application settings.',
+                'introduction' => '1.4.0',
+                'default' => '',
+                'required' => false,
+                'question' => '',
+                'filter' => ''
+            ]
+        ]
+    ]
 ];

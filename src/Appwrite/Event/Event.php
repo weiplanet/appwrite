@@ -3,8 +3,9 @@
 namespace Appwrite\Event;
 
 use InvalidArgumentException;
-use Resque;
 use Utopia\Database\Document;
+use Utopia\Queue\Client;
+use Utopia\Queue\Connection;
 
 class Event
 {
@@ -23,6 +24,12 @@ class Event
     public const FUNCTIONS_QUEUE_NAME = 'v1-functions';
     public const FUNCTIONS_CLASS_NAME = 'FunctionsV1';
 
+    public const USAGE_QUEUE_NAME = 'v1-usage';
+    public const USAGE_CLASS_NAME = 'UsageV1';
+
+    public const USAGE_DUMP_QUEUE_NAME = 'v1-usage-dump';
+    public const USAGE_DUMP_CLASS_NAME = 'UsageDumpV1';
+
     public const WEBHOOK_QUEUE_NAME = 'v1-webhooks';
     public const WEBHOOK_CLASS_NAME = 'WebhooksV1';
 
@@ -32,24 +39,29 @@ class Event
     public const BUILDS_QUEUE_NAME = 'v1-builds';
     public const BUILDS_CLASS_NAME = 'BuildsV1';
 
+    public const MESSAGING_QUEUE_NAME = 'v1-messaging';
+    public const MESSAGING_CLASS_NAME = 'MessagingV1';
+
+    public const MIGRATIONS_QUEUE_NAME = 'v1-migrations';
+    public const MIGRATIONS_CLASS_NAME = 'MigrationsV1';
+
     protected string $queue = '';
     protected string $class = '';
     protected string $event = '';
     protected array $params = [];
+    protected array $sensitive = [];
     protected array $payload = [];
+    protected array $context = [];
     protected ?Document $project = null;
     protected ?Document $user = null;
-    protected ?Document $context = null;
+    protected bool $paused = false;
 
     /**
-     * @param string $queue
-     * @param string $class
+     * @param Connection $connection
      * @return void
      */
-    public function __construct(string $queue, string $class)
+    public function __construct(protected Connection $connection)
     {
-        $this->queue = $queue;
-        $this->class = $class;
     }
 
     /**
@@ -113,9 +125,9 @@ class Event
     /**
      * Get project for this event.
      *
-     * @return Document
+     * @return ?Document
      */
-    public function getProject(): Document
+    public function getProject(): ?Document
     {
         return $this->project;
     }
@@ -134,11 +146,11 @@ class Event
     }
 
     /**
-     * Get project for this event.
+     * Get user responsible for triggering this event.
      *
-     * @return Document
+     * @return ?Document
      */
-    public function getUser(): Document
+    public function getUser(): ?Document
     {
         return $this->user;
     }
@@ -147,11 +159,16 @@ class Event
      * Set payload for this event.
      *
      * @param array $payload
+     * @param array $sensitive
      * @return self
      */
-    public function setPayload(array $payload): self
+    public function setPayload(array $payload, array $sensitive = []): self
     {
         $this->payload = $payload;
+
+        foreach ($sensitive as $key) {
+            $this->sensitive[$key] = true;
+        }
 
         return $this;
     }
@@ -166,15 +183,29 @@ class Event
         return $this->payload;
     }
 
+    public function getRealtimePayload(): array
+    {
+        $payload = [];
+
+        foreach ($this->payload as $key => $value) {
+            if (!isset($this->sensitive[$key])) {
+                $payload[$key] = $value;
+            }
+        }
+
+        return $payload;
+    }
+
     /**
      * Set context for this event.
      *
+     * @param string $key
      * @param Document $context
      * @return self
      */
-    public function setContext(Document $context): self
+    public function setContext(string $key, Document $context): self
     {
-        $this->context = $context;
+        $this->context[$key] = $context;
 
         return $this;
     }
@@ -182,11 +213,13 @@ class Event
     /**
      * Get context for this event.
      *
+     * @param string $key
+     *
      * @return null|Document
      */
-    public function getContext(): ?Document
+    public function getContext(string $key): ?Document
     {
-        return $this->context;
+        return $this->context[$key] ?? null;
     }
 
     /**
@@ -225,6 +258,13 @@ class Event
         return $this;
     }
 
+    public function setParamSensitive(string $key): self
+    {
+        $this->sensitive[$key] = true;
+
+        return $this;
+    }
+
     /**
      * Get param of event.
      *
@@ -254,7 +294,13 @@ class Event
      */
     public function trigger(): string|bool
     {
-        return Resque::enqueue($this->queue, $this->class, [
+        if ($this->paused) {
+            return false;
+        }
+
+        $client = new Client($this->queue, $this->connection);
+
+        return $client->enqueue([
             'project' => $this->project,
             'user' => $this->user,
             'payload' => $this->payload,
@@ -271,6 +317,7 @@ class Event
     public function reset(): self
     {
         $this->params = [];
+        $this->sensitive = [];
 
         return $this;
     }
@@ -292,14 +339,28 @@ class Event
         $type = $parts[0] ?? false;
         $resource = $parts[1] ?? false;
         $hasSubResource = $count > 3 && \str_starts_with($parts[3], '[');
+        $hasSubSubResource = $count > 5 && \str_starts_with($parts[5], '[') && $hasSubResource;
 
         if ($hasSubResource) {
             $subType = $parts[2];
             $subResource = $parts[3];
+        }
+
+        if ($hasSubSubResource) {
+            $subSubType = $parts[4];
+            $subSubResource = $parts[5];
+            if ($count == 8) {
+                $attribute = $parts[7];
+            }
+        }
+
+        if ($hasSubResource && !$hasSubSubResource) {
             if ($count === 6) {
                 $attribute = $parts[5];
             }
-        } else {
+        }
+
+        if (!$hasSubResource) {
             if ($count === 4) {
                 $attribute = $parts[3];
             }
@@ -307,9 +368,12 @@ class Event
 
         $subType ??= false;
         $subResource ??= false;
+        $subSubType ??= false;
+        $subSubResource ??= false;
         $attribute ??= false;
         $action = match (true) {
             !$hasSubResource && $count > 2 => $parts[2],
+            $hasSubSubResource => $parts[6] ?? false,
             $hasSubResource && $count > 4 => $parts[4],
             default => false
         };
@@ -319,6 +383,8 @@ class Event
             'resource' => $resource,
             'subType' => $subType,
             'subResource' => $subResource,
+            'subSubType' => $subSubType,
+            'subSubResource' => $subSubResource,
             'action' => $action,
             'attribute' => $attribute,
         ];
@@ -345,6 +411,8 @@ class Event
         $resource = $parsed['resource'];
         $subType = $parsed['subType'];
         $subResource = $parsed['subResource'];
+        $subSubType = $parsed['subSubType'];
+        $subSubResource = $parsed['subSubResource'];
         $action = $parsed['action'];
         $attribute = $parsed['attribute'];
 
@@ -356,11 +424,21 @@ class Event
             throw new InvalidArgumentException("{$subResource} is missing from the params.");
         }
 
+        if ($subSubResource && !\in_array(\trim($subSubResource, "\[\]"), $paramKeys)) {
+            throw new InvalidArgumentException("{$subSubResource} is missing from the params.");
+        }
+
         /**
          * Create all possible patterns including placeholders.
          */
         if ($action) {
-            if ($subResource) {
+            if ($subSubResource) {
+                if ($attribute) {
+                    $patterns[] = \implode('.', [$type, $resource, $subType, $subResource, $subSubType, $subSubResource, $action, $attribute]);
+                }
+                $patterns[] = \implode('.', [$type, $resource, $subType, $subResource, $subSubType, $subSubResource, $action]);
+                $patterns[] = \implode('.', [$type, $resource, $subType, $subResource, $subSubType, $subSubResource]);
+            } elseif ($subResource) {
                 if ($attribute) {
                     $patterns[] = \implode('.', [$type, $resource, $subType, $subResource, $action, $attribute]);
                 }
@@ -372,6 +450,9 @@ class Event
             if ($attribute) {
                 $patterns[] = \implode('.', [$type, $resource, $action, $attribute]);
             }
+        }
+        if ($subSubResource) {
+            $patterns[] = \implode('.', [$type, $resource, $subType, $subResource, $subSubType, $subSubResource]);
         }
         if ($subResource) {
             $patterns[] = \implode('.', [$type, $resource, $subType, $subResource]);
@@ -392,12 +473,24 @@ class Event
             $events[] = \str_replace($paramKeys, '*', $eventPattern);
             foreach ($paramKeys as $key) {
                 foreach ($paramKeys as $current) {
-                    if ($current === $key) {
-                        continue;
+                    if ($subSubResource) {
+                        foreach ($paramKeys as $subCurrent) {
+                            if ($subCurrent === $current || $subCurrent === $key) {
+                                continue;
+                            }
+                            $filtered1 = \array_filter($paramKeys, fn (string $k) => $k === $subCurrent);
+                            $events[] = \str_replace($paramKeys, $paramValues, \str_replace($filtered1, '*', $eventPattern));
+                            $filtered2 = \array_filter($paramKeys, fn (string $k) => $k === $current);
+                            $events[] = \str_replace($paramKeys, $paramValues, \str_replace($filtered2, '*', \str_replace($filtered1, '*', $eventPattern)));
+                            $events[] = \str_replace($paramKeys, $paramValues, \str_replace($filtered2, '*', $eventPattern));
+                        }
+                    } else {
+                        if ($current === $key) {
+                            continue;
+                        }
+                        $filtered = \array_filter($paramKeys, fn (string $k) => $k === $current);
+                        $events[] = \str_replace($paramKeys, $paramValues, \str_replace($filtered, '*', $eventPattern));
                     }
-
-                    $filtered = \array_filter($paramKeys, fn(string $k) => $k === $current);
-                    $events[] = \str_replace($paramKeys, $paramValues, \str_replace($filtered, '*', $eventPattern));
                 }
             }
         }
@@ -408,6 +501,27 @@ class Event
         $events = \array_map(fn (string $event) => \str_replace(['[', ']'], '', $event), $events);
         $events = \array_unique($events);
 
-        return $events;
+        /**
+         * Force a non-assoc array.
+         */
+        return \array_values($events);
+    }
+
+    /**
+     * Get the value of paused
+     */
+    public function isPaused(): bool
+    {
+        return $this->paused;
+    }
+
+    /**
+     * Set the value of paused
+     */
+    public function setPaused(bool $paused): self
+    {
+        $this->paused = $paused;
+
+        return $this;
     }
 }

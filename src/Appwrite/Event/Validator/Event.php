@@ -8,6 +8,11 @@ use Utopia\Validator;
 class Event extends Validator
 {
     /**
+     * @var string
+     */
+    protected string $message = 'Event is not valid.';
+
+    /**
      * Get Description.
      *
      * Returns validator description
@@ -16,7 +21,7 @@ class Event extends Validator
      */
     public function getDescription(): string
     {
-        return 'Event is not valid.';
+        return $this->message;
     }
 
     /**
@@ -29,10 +34,10 @@ class Event extends Validator
     public function isValid($value): bool
     {
         $events = Config::getParam('events', []);
-        $parts = \explode('.', $value);
+        $parts = \explode('.', $value ?? '');
         $count = \count($parts);
 
-        if ($count < 2 || $count > 6) {
+        if ($count < 2 || $count > 7) {
             return false;
         }
 
@@ -42,6 +47,7 @@ class Event extends Validator
         $type = $parts[0] ?? false;
         $resource = $parts[1] ?? false;
         $hasSubResource = $count > 3 && ($events[$type]['$resource'] ?? false) && ($events[$type][$parts[2]]['$resource'] ?? false);
+        $hasSubSubResource = $count > 5 && $hasSubResource && ($events[$type][$parts[2]][$parts[4]]['$resource'] ?? false);
 
         if (!$type || !$resource) {
             return false;
@@ -50,21 +56,37 @@ class Event extends Validator
         if ($hasSubResource) {
             $subType = $parts[2];
             $subResource = $parts[3];
+        }
+
+        if ($hasSubSubResource) {
+            $subSubType = $parts[4];
+            $subSubResource = $parts[5];
+            if ($count === 8) {
+                $attribute = $parts[7];
+            }
+        }
+
+        if ($hasSubResource && !$hasSubSubResource) {
             if ($count === 6) {
                 $attribute = $parts[5];
             }
-        } else {
+        }
+
+        if (!$hasSubResource) {
             if ($count === 4) {
                 $attribute = $parts[3];
             }
         }
 
+        $subSubType ??= false;
+        $subSubResource ??= false;
         $subType ??= false;
         $subResource ??= false;
         $attribute ??= false;
 
         $action = match (true) {
             !$hasSubResource && $count > 2 => $parts[2],
+            $hasSubSubResource => $parts[6] ?? false,
             $hasSubResource && $count > 4 => $parts[4],
             default => false
         };

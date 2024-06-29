@@ -22,18 +22,23 @@ class File extends Model
                 'default' => '',
                 'example' => '5e5ea5c16897e',
             ])
-            ->addRule('$read', [
-                'type' => self::TYPE_STRING,
-                'description' => 'File read permissions.',
-                'default' => [],
-                'example' => 'role:all',
-                'array' => true,
+            ->addRule('$createdAt', [
+                'type' => self::TYPE_DATETIME,
+                'description' => 'File creation date in ISO 8601 format.',
+                'default' => '',
+                'example' => self::TYPE_DATETIME_EXAMPLE,
             ])
-            ->addRule('$write', [
+            ->addRule('$updatedAt', [
+                'type' => self::TYPE_DATETIME,
+                'description' => 'File update date in ISO 8601 format.',
+                'default' => '',
+                'example' => self::TYPE_DATETIME_EXAMPLE,
+            ])
+            ->addRule('$permissions', [
                 'type' => self::TYPE_STRING,
-                'description' => 'File write permissions.',
+                'description' => 'File permissions. [Learn more about permissions](https://appwrite.io/docs/permissions).',
                 'default' => [],
-                'example' => 'user:608f9da25e7e1',
+                'example' => ['read("any")'],
                 'array' => true,
             ])
             ->addRule('name', [
@@ -41,12 +46,6 @@ class File extends Model
                 'description' => 'File name.',
                 'default' => '',
                 'example' => 'Pink.png',
-            ])
-            ->addRule('dateCreated', [
-                'type' => self::TYPE_INTEGER,
-                'description' => 'File creation date in Unix timestamp.',
-                'default' => 0,
-                'example' => 1592981250,
             ])
             ->addRule('signature', [
                 'type' => self::TYPE_STRING,

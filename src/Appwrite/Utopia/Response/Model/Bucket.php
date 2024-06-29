@@ -4,6 +4,7 @@ namespace Appwrite\Utopia\Response\Model;
 
 use Appwrite\Utopia\Response;
 use Appwrite\Utopia\Response\Model;
+use Utopia\Storage\Compression\Compression;
 
 class Bucket extends Model
 {
@@ -16,37 +17,30 @@ class Bucket extends Model
                 'default' => '',
                 'example' => '5e5ea5c16897e',
             ])
-            ->addRule('$read', [
-                'type' => self::TYPE_STRING,
-                'description' => 'File read permissions.',
-                'default' => [],
-                'example' => ['role:all'],
-                'array' => true,
-            ])
-            ->addRule('$write', [
-                'type' => self::TYPE_STRING,
-                'description' => 'File write permissions.',
-                'default' => [],
-                'example' => ['user:608f9da25e7e1'],
-                'array' => true,
-            ])
-            ->addRule('permission', [
-                'type' => self::TYPE_STRING,
-                'description' => 'Bucket permission model. Possible values: `bucket` or `file`',
+            ->addRule('$createdAt', [
+                'type' => self::TYPE_DATETIME,
+                'description' => 'Bucket creation time in ISO 8601 format.',
                 'default' => '',
-                'example' => 'file',
+                'example' => self::TYPE_DATETIME_EXAMPLE,
             ])
-            ->addRule('dateCreated', [
-                'type' => self::TYPE_INTEGER,
-                'description' => 'Bucket creation date in Unix timestamp.',
-                'default' => 0,
-                'example' => 1592981250,
+            ->addRule('$updatedAt', [
+                'type' => self::TYPE_DATETIME,
+                'description' => 'Bucket update date in ISO 8601 format.',
+                'default' => '',
+                'example' => self::TYPE_DATETIME_EXAMPLE,
             ])
-            ->addRule('dateUpdated', [
-                'type' => self::TYPE_INTEGER,
-                'description' => 'Bucket update date in Unix timestamp.',
-                'default' => 0,
-                'example' => 1592981250,
+            ->addRule('$permissions', [
+                'type' => self::TYPE_STRING,
+                'description' => 'Bucket permissions. [Learn more about permissions](https://appwrite.io/docs/permissions).',
+                'default' => [],
+                'example' => ['read("any")'],
+                'array' => true,
+            ])
+            ->addRule('fileSecurity', [
+                'type' => self::TYPE_BOOLEAN,
+                'description' => 'Whether file-level security is enabled. [Learn more about permissions](https://appwrite.io/docs/permissions).',
+                'default' => false,
+                'example' => true,
             ])
             ->addRule('name', [
                 'type' => self::TYPE_STRING,
@@ -72,6 +66,13 @@ class Bucket extends Model
                 'default' => [],
                 'example' => ['jpg', 'png'],
                 'array' => true
+            ])
+            ->addRule('compression', [
+                'type' => self::TYPE_STRING,
+                'description' => 'Compression algorithm choosen for compression. Will be one of ' . Compression::NONE . ', [' . Compression::GZIP . '](https://en.wikipedia.org/wiki/Gzip), or [' . Compression::ZSTD . '](https://en.wikipedia.org/wiki/Zstd).',
+                'default' => '',
+                'example' => 'gzip',
+                'array' => false
             ])
             ->addRule('encryption', [
                 'type' => self::TYPE_BOOLEAN,

@@ -4,6 +4,7 @@ namespace Appwrite\Utopia\Response\Model;
 
 use Appwrite\Utopia\Response;
 use Appwrite\Utopia\Response\Model;
+use Utopia\Database\Helpers\Role;
 
 class Execution extends Model
 {
@@ -16,11 +17,23 @@ class Execution extends Model
                 'default' => '',
                 'example' => '5e5ea5c16897e',
             ])
-            ->addRule('$read', [
-                'type' => self::TYPE_STRING,
-                'description' => 'Execution read permissions.',
+            ->addRule('$createdAt', [
+                'type' => self::TYPE_DATETIME,
+                'description' => 'Execution creation date in ISO 8601 format.',
                 'default' => '',
-                'example' => 'role:all',
+                'example' => self::TYPE_DATETIME_EXAMPLE,
+            ])
+            ->addRule('$updatedAt', [
+                'type' => self::TYPE_DATETIME,
+                'description' => 'Execution upate date in ISO 8601 format.',
+                'default' => '',
+                'example' => self::TYPE_DATETIME_EXAMPLE,
+            ])
+            ->addRule('$permissions', [
+                'type' => self::TYPE_STRING,
+                'description' => 'Execution roles.',
+                'default' => '',
+                'example' => [Role::any()->toString()],
                 'array' => true,
             ])
             ->addRule('functionId', [
@@ -28,12 +41,6 @@ class Execution extends Model
                 'description' => 'Function ID.',
                 'default' => '',
                 'example' => '5e5ea6g16897e',
-            ])
-            ->addRule('dateCreated', [
-                'type' => self::TYPE_INTEGER,
-                'description' => 'The execution creation date in Unix timestamp.',
-                'default' => 0,
-                'example' => 1592981250,
             ])
             ->addRule('trigger', [
                 'type' => self::TYPE_STRING,
@@ -47,27 +54,59 @@ class Execution extends Model
                 'default' => '',
                 'example' => 'processing',
             ])
-            ->addRule('statusCode', [
+            ->addRule('requestMethod', [
+                'type' => self::TYPE_STRING,
+                'description' => 'HTTP request method type.',
+                'default' => '',
+                'example' => 'GET',
+            ])
+            ->addRule('requestPath', [
+                'type' => self::TYPE_STRING,
+                'description' => 'HTTP request path and query.',
+                'default' => '',
+                'example' => '/articles?id=5',
+            ])
+            ->addRule('requestHeaders', [
+                'type' => Response::MODEL_HEADERS,
+                'description' => 'HTTP response headers as a key-value object. This will return only whitelisted headers. All headers are returned if execution is created as synchronous.',
+                'default' => [],
+                'example' => [['Content-Type' => 'application/json']],
+                'array' => true,
+            ])
+            ->addRule('responseStatusCode', [
                 'type' => self::TYPE_INTEGER,
-                'description' => 'The script status code.',
+                'description' => 'HTTP response status code.',
                 'default' => 0,
-                'example' => 0,
+                'example' => 200,
             ])
-            ->addRule('response', [
+            ->addRule('responseBody', [
                 'type' => self::TYPE_STRING,
-                'description' => 'The script response output string. Logs the last 4,000 characters of the execution response output.',
+                'description' => 'HTTP response body. This will return empty unless execution is created as synchronous.',
+                'default' => '',
+                'example' => 'Developers are awesome.',
+            ])
+            ->addRule('responseHeaders', [
+                'type' => Response::MODEL_HEADERS,
+                'description' => 'HTTP response headers as a key-value object. This will return only whitelisted headers. All headers are returned if execution is created as synchronous.',
+                'default' => [],
+                'example' => [['Content-Type' => 'application/json']],
+                'array' => true,
+            ])
+            ->addRule('logs', [
+                'type' => self::TYPE_STRING,
+                'description' => 'Function logs. Includes the last 4,000 characters. This will return an empty string unless the response is returned using an API key or as part of a webhook payload.',
                 'default' => '',
                 'example' => '',
             ])
-            ->addRule('stderr', [
+            ->addRule('errors', [
                 'type' => self::TYPE_STRING,
-                'description' => 'The script stderr output string. Logs the last 4,000 characters of the execution stderr output',
+                'description' => 'Function errors. Includes the last 4,000 characters. This will return an empty string unless the response is returned using an API key or as part of a webhook payload.',
                 'default' => '',
                 'example' => '',
             ])
-            ->addRule('time', [
+            ->addRule('duration', [
                 'type' => self::TYPE_FLOAT,
-                'description' => 'The script execution time in seconds.',
+                'description' => 'Function execution duration in seconds.',
                 'default' => 0,
                 'example' => 0.400,
             ])

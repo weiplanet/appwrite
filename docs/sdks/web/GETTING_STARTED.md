@@ -10,9 +10,9 @@ Initialize your SDK with your Appwrite server API endpoint and project ID which 
 
 ```js
 // Init your Web SDK
-const sdk = new Appwrite();
+const client = new Client();
 
-sdk
+client
     .setEndpoint('http://localhost/v1') // Your Appwrite Endpoint
     .setProject('455x34dfkj') // Your project ID
 ;
@@ -22,8 +22,10 @@ sdk
 Once your SDK object is set, access any of the Appwrite services and choose any request to send. Full documentation for any service method you would like to use can be found in your SDK documentation or in the [API References](https://appwrite.io/docs) section.
 
 ```js
+const account = new Account(client);
+
 // Register User
-sdk.account.create('[USER_ID]', 'me@example.com', 'password', 'Jane Doe')
+account.create(ID.unique(), "email@example.com", "password", "Walter O'Brien")
     .then(function (response) {
         console.log(response);
     }, function (error) {
@@ -35,15 +37,17 @@ sdk.account.create('[USER_ID]', 'me@example.com', 'password', 'Jane Doe')
 ### Full Example
 ```js
 // Init your Web SDK
-const sdk = new Appwrite();
+const client = new Client();
 
-sdk
+client
     .setEndpoint('http://localhost/v1') // Your Appwrite Endpoint
     .setProject('455x34dfkj')
 ;
 
+const account = new Account(client);
+
 // Register User
-sdk.account.create('[USER_ID]', 'me@example.com', 'password', 'Jane Doe')
+account.create(ID.unique(), "email@example.com", "password", "Walter O'Brien")
     .then(function (response) {
         console.log(response);
     }, function (error) {
@@ -53,7 +57,7 @@ sdk.account.create('[USER_ID]', 'me@example.com', 'password', 'Jane Doe')
 
 ### Learn more
 You can use the following resources to learn more and get help
-- 🚀 [Getting Started Tutorial](https://appwrite.io/docs/getting-started-for-flutter)
+- 🚀 [Getting Started Tutorial](https://appwrite.io/docs/getting-started-for-web)
 - 📜 [Appwrite Docs](https://appwrite.io/docs)
 - 💬 [Discord Community](https://appwrite.io/discord)
-- 🚂 [Appwrite Flutter Playground](https://github.com/appwrite/playground-for-flutter)
+- 🚂 [Appwrite Web Playground](https://github.com/appwrite/playground-for-web)

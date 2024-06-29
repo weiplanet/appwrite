@@ -10,7 +10,7 @@ class Platform extends Model
     /**
      * @var bool
      */
-    protected $public = false;
+    protected bool $public = false;
 
     public function __construct()
     {
@@ -21,6 +21,18 @@ class Platform extends Model
                 'default' => '',
                 'example' => '5e5ea5c16897e',
             ])
+            ->addRule('$createdAt', [
+                'type' => self::TYPE_DATETIME,
+                'description' => 'Platform creation date in ISO 8601 format.',
+                'default' => '',
+                'example' => self::TYPE_DATETIME_EXAMPLE,
+            ])
+            ->addRule('$updatedAt', [
+                'type' => self::TYPE_DATETIME,
+                'description' => 'Platform update date in ISO 8601 format.',
+                'default' => '',
+                'example' => self::TYPE_DATETIME_EXAMPLE,
+            ])
             ->addRule('name', [
                 'type' => self::TYPE_STRING,
                 'description' => 'Platform name.',
@@ -29,9 +41,9 @@ class Platform extends Model
             ])
             ->addRule('type', [
                 'type' => self::TYPE_STRING,
-                'description' => 'Platform type. Possible values are: web, flutter-ios, flutter-android, ios, android, and unity.',
+                'description' => 'Platform type. Possible values are: web, flutter-web, flutter-ios, flutter-android, ios, android, and unity.',
                 'default' => '',
-                'example' => 'My Web App',
+                'example' => 'web',
             ])
             ->addRule('key', [
                 'type' => self::TYPE_STRING,

@@ -2,18 +2,23 @@
 
 namespace Appwrite\Event;
 
-use Resque;
 use Utopia\Database\Document;
+use Utopia\DSN\DSN;
+use Utopia\Queue\Client;
+use Utopia\Queue\Connection;
 
 class Database extends Event
 {
     protected string $type = '';
+    protected ?Document $database = null;
     protected ?Document $collection = null;
     protected ?Document $document = null;
 
-    public function __construct()
+    public function __construct(protected Connection $connection)
     {
-        parent::__construct(Event::DATABASE_QUEUE_NAME, Event::DATABASE_CLASS_NAME);
+        parent::__construct($connection);
+
+        $this->setClass(Event::DATABASE_CLASS_NAME);
     }
 
     /**
@@ -36,6 +41,18 @@ class Database extends Event
     public function getType(): string
     {
         return $this->type;
+    }
+
+    /**
+     * Set the database for this event
+     *
+     * @param Document $database
+     * @return self
+     */
+    public function setDatabase(Document $database): self
+    {
+        $this->database = $database;
+        return $this;
     }
 
     /**
@@ -91,13 +108,30 @@ class Database extends Event
      */
     public function trigger(): string|bool
     {
-        return Resque::enqueue($this->queue, $this->class, [
-            'project' => $this->project,
-            'user' => $this->user,
-            'type' => $this->type,
-            'collection' => $this->collection,
-            'document' => $this->document,
-            'events' => Event::generateEvents($this->getEvent(), $this->getParams())
-        ]);
+        try {
+            $dsn = new DSN($this->getProject()->getAttribute('database'));
+        } catch (\InvalidArgumentException) {
+            // TODO: Temporary until all projects are using shared tables
+            $dsn = new DSN('mysql://' . $this->getProject()->getAttribute('database'));
+        }
+
+        $this->setQueue($dsn->getHost());
+
+        $client = new Client($this->queue, $this->connection);
+
+        try {
+            $result = $client->enqueue([
+                'project' => $this->project,
+                'user' => $this->user,
+                'type' => $this->type,
+                'collection' => $this->collection,
+                'document' => $this->document,
+                'database' => $this->database,
+                'events' => Event::generateEvents($this->getEvent(), $this->getParams())
+            ]);
+            return $result;
+        } catch (\Throwable $th) {
+            return false;
+        }
     }
 }

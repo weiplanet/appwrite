@@ -16,6 +16,18 @@ class Session extends Model
                 'default' => '',
                 'example' => '5e5ea5c16897e',
             ])
+            ->addRule('$createdAt', [
+                'type' => self::TYPE_DATETIME,
+                'description' => 'Session creation date in ISO 8601 format.',
+                'default' => '',
+                'example' => self::TYPE_DATETIME_EXAMPLE,
+            ])
+            ->addRule('$updatedAt', [
+                'type' => self::TYPE_DATETIME,
+                'description' => 'Session update date in ISO 8601 format.',
+                'default' => '',
+                'example' => self::TYPE_DATETIME_EXAMPLE,
+            ])
             ->addRule('userId', [
                 'type' => self::TYPE_STRING,
                 'description' => 'User ID.',
@@ -23,10 +35,10 @@ class Session extends Model
                 'example' => '5e5bb8c16897e',
             ])
             ->addRule('expire', [
-                'type' => self::TYPE_INTEGER,
-                'description' => 'Session expiration date in Unix timestamp.',
-                'default' => 0,
-                'example' => 1592981250,
+                'type' => self::TYPE_DATETIME,
+                'description' => 'Session expiration date in ISO 8601 format.',
+                'default' => '',
+                'example' => self::TYPE_DATETIME_EXAMPLE,
             ])
             ->addRule('provider', [
                 'type' => self::TYPE_STRING,
@@ -47,10 +59,10 @@ class Session extends Model
                 'example' => 'MTQ0NjJkZmQ5OTM2NDE1ZTZjNGZmZjI3',
             ])
             ->addRule('providerAccessTokenExpiry', [
-                'type' => self::TYPE_INTEGER,
-                'description' => 'Date, the Unix timestamp of when the access token expires.',
-                'default' => 0,
-                'example' => 1592981250,
+                'type' => self::TYPE_DATETIME,
+                'description' => 'The date of when the access token expires in ISO 8601 format.',
+                'default' => '',
+                'example' => self::TYPE_DATETIME_EXAMPLE,
             ])
             ->addRule('providerRefreshToken', [
                 'type' => self::TYPE_STRING,
@@ -153,6 +165,25 @@ class Session extends Model
                 'description' => 'Returns true if this the current user session.',
                 'default' => false,
                 'example' => true,
+            ])
+            ->addRule('factors', [
+                'type' => self::TYPE_STRING,
+                'description' => 'Returns a list of active session factors.',
+                'default' => [],
+                'example' => ['email'],
+                'array' => true,
+            ])
+            ->addRule('secret', [
+                'type' => self::TYPE_STRING,
+                'description' => 'Secret used to authenticate the user. Only included if the request was made with an API key',
+                'default' => '',
+                'example' => '5e5bb8c16897e',
+            ])
+            ->addRule('mfaUpdatedAt', [
+                'type' => self::TYPE_DATETIME,
+                'description' => 'Most recent date in ISO 8601 format when the session successfully passed MFA challenge.',
+                'default' => '',
+                'example' => self::TYPE_DATETIME_EXAMPLE,
             ])
         ;
     }

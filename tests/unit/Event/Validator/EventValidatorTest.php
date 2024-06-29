@@ -1,10 +1,9 @@
 <?php
 
-namespace Appwrite\Tests;
+namespace Tests\Unit\Event\Validator;
 
 use Appwrite\Event\Validator\Event;
 use PHPUnit\Framework\TestCase;
-use Utopia\Config\Config;
 
 class EventValidatorTest extends TestCase
 {
@@ -12,7 +11,6 @@ class EventValidatorTest extends TestCase
 
     public function setUp(): void
     {
-        Config::load('events', __DIR__ . '/../../../../app/config/events.php');
         $this->object = new Event();
     }
 
@@ -20,7 +18,7 @@ class EventValidatorTest extends TestCase
     {
     }
 
-    public function testValues()
+    public function testValues(): void
     {
         /**
          * Test for SUCCESS
@@ -31,15 +29,27 @@ class EventValidatorTest extends TestCase
         $this->assertTrue($this->object->isValid('users.*.update.email'));
         $this->assertTrue($this->object->isValid('users.*.update'));
         $this->assertTrue($this->object->isValid('users.*'));
-        $this->assertTrue($this->object->isValid('collections.chapters.documents.prolog.create'));
-        $this->assertTrue($this->object->isValid('collections.chapters.documents.prolog'));
-        $this->assertTrue($this->object->isValid('collections.chapters.documents.*.create'));
-        $this->assertTrue($this->object->isValid('collections.chapters.documents.*'));
-        $this->assertTrue($this->object->isValid('collections.*.documents.prolog.create'));
-        $this->assertTrue($this->object->isValid('collections.*.documents.prolog'));
-        $this->assertTrue($this->object->isValid('collections.*.documents.*.create'));
-        $this->assertTrue($this->object->isValid('collections.*.documents.*'));
-        $this->assertTrue($this->object->isValid('collections.*'));
+        $this->assertTrue($this->object->isValid('databases.books.collections.chapters.documents.prolog.create'));
+        $this->assertTrue($this->object->isValid('databases.books.collections.chapters.documents.prolog'));
+        $this->assertTrue($this->object->isValid('databases.books.collections.chapters.documents.*.create'));
+        $this->assertTrue($this->object->isValid('databases.books.collections.chapters.documents.*'));
+        $this->assertTrue($this->object->isValid('databases.books.collections.*.documents.prolog.create'));
+        $this->assertTrue($this->object->isValid('databases.books.collections.*.documents.prolog'));
+        $this->assertTrue($this->object->isValid('databases.books.collections.*.documents.*.create'));
+        $this->assertTrue($this->object->isValid('databases.books.collections.*.documents.*'));
+        $this->assertTrue($this->object->isValid('databases.*.collections.chapters.documents.prolog.create'));
+        $this->assertTrue($this->object->isValid('databases.*.collections.chapters.documents.prolog'));
+        $this->assertTrue($this->object->isValid('databases.*.collections.chapters.documents.*.create'));
+        $this->assertTrue($this->object->isValid('databases.*.collections.chapters.documents.*'));
+        $this->assertTrue($this->object->isValid('databases.*.collections.*.documents.prolog.create'));
+        $this->assertTrue($this->object->isValid('databases.*.collections.*.documents.prolog'));
+        $this->assertTrue($this->object->isValid('databases.*.collections.*.documents.*.create'));
+        $this->assertTrue($this->object->isValid('databases.*.collections.*.documents.*'));
+        $this->assertTrue($this->object->isValid('databases.*.collections.*'));
+        $this->assertTrue($this->object->isValid('databases.*'));
+        $this->assertTrue($this->object->isValid('databases.books'));
+        $this->assertTrue($this->object->isValid('databases.books.collections.chapters'));
+        $this->assertTrue($this->object->isValid('databases.books.collections.*'));
         $this->assertTrue($this->object->isValid('functions.*'));
         $this->assertTrue($this->object->isValid('buckets.*'));
         $this->assertTrue($this->object->isValid('teams.*'));
